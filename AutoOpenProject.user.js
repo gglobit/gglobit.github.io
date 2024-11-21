@@ -1,9 +1,7 @@
 // ==UserScript==
 // @name         AutoOpenProject
-// @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Добавляет кнопки для автоматического заполенния дней и ночей
-// @author       Chertilasus
 // @match        https://openproject.globus.ru/my/page
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
