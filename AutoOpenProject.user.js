@@ -135,52 +135,56 @@
     }
 
     // Функция отправки запроса
-    function sendRequest(Payload, selectedDate) {
-        if (selectedDate) {
-            Payload.spentOn = selectedDate; // Обновляем дату в payload
-        } else {
-            alert("Не удалось найти текущую дату.");
-            return;
-        }
-
-        const csrfToken = getCSRFToken();
-        if (!csrfToken) {
-            alert("CSRF token not found.");
-            return;
-        }
-
-        GM_xmlhttpRequest({
-            method: "POST",
-            url: endpoint,
-            headers: {
-                "accept": "application/json, text/plain, */*",
-                "accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-                "cache-control": "no-cache",
-                "content-type": "application/json",
-                "origin": "https://openproject.globus.ru",
-                "referer": "https://openproject.globus.ru/my/page",
-                "sec-ch-ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-                "sec-ch-ua-mobile": "?0",
-                "sec-ch-ua-platform": '"Windows"',
-                "sec-fetch-dest": "empty",
-                "sec-fetch-mode": "cors",
-                "sec-fetch-site": "same-origin",
-                "user-agent": navigator.userAgent,
-                "x-authentication-scheme": "Session",
-                "x-csrf-token": csrfToken,
-                "x-kl-kes-ajax-request": "Ajax_Request",
-                "x-requested-with": "XMLHttpRequest"
-            },
-            data: JSON.stringify(Payload),
-            onload: function(response) {
-                console.log("Запрос выполнен успешно!");
-            },
-            onerror: function(error) {
-                console.error("Ошибка при выполнении запроса:", error);
-            }
-        });
+function sendRequest(Payload, selectedDate) {
+    if (selectedDate) {
+        Payload.spentOn = selectedDate; // Обновляем дату в payload
+    } else {
+        alert("Не удалось найти текущую дату.");
+        return;
     }
 
+    const csrfToken = getCSRFToken();
+    if (!csrfToken) {
+        alert("CSRF token not found.");
+        return;
+    }
+
+    // Получаем все куки из браузера
+    const cookies = document.cookie;
+
+    GM_xmlhttpRequest({
+        method: "POST",
+        url: endpoint,
+        headers: {
+            "accept": "application/json, text/plain, */*",
+            "accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+            "cache-control": "no-cache",
+            "content-type": "application/json",
+            "cookie": cookies, // Добавляем все куки
+            "origin": "https://openproject.globus.ru",
+            "pragma": "no-cache",
+            "priority": "u=1, i",
+            "referer": "https://openproject.globus.ru/my/page",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Windows"',
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-origin",
+            "user-agent": navigator.userAgent,
+            "x-authentication-scheme": "Session",
+            "x-csrf-token": csrfToken,
+            "x-kl-kes-ajax-request": "Ajax_Request",
+            "x-requested-with": "XMLHttpRequest"
+        },
+        data: JSON.stringify(Payload),
+        onload: function(response) {
+            console.log("Запрос выполнен успешно!", response.responseText);
+        },
+        onerror: function(error) {
+            console.error("Ошибка при выполнении запроса:", error);
+        }
+    });
+}
     // Функция для добавления кнопки в форму
     function addButtonToForm() {
                 // Получаем выбранную дату из формы и обновляем payload
@@ -251,5 +255,4 @@
         }
     }, 200);
 
-    // Начинаем наблюдать за добавлением модального окна
 })();
