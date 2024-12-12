@@ -250,25 +250,31 @@
                                         let linkNumber = "Без бага"; // По умолчанию "Без бага"
 
                                         // Функция для поиска ссылки
-                                        function findLinkNumber(data) {
-                                            if (typeof data === 'string') {
-                                                // Проверяем, содержит ли строка ссылку
-                                                const linkMatch = data.match(/https:\/\/tfs-devops\.globus\.ru\/.*\/(\d+)/);
-                                                if (linkMatch && linkMatch[1]) {
-                                                    return linkMatch[1]; // Возвращаем число
-                                                }
-                                            } else if (typeof data === 'object' && data !== null) {
-                                                // Рекурсивно ищем в объекте или массиве
-                                                for (const key in data) {
-                                                    const result = findLinkNumber(data[key]);
-                                                    if (result) {
-                                                        return result;
-                                                    }
-                                                }
-                                            }
-                                            return null;
-                                        }
+  // Функция для поиска ссылки в тексте
+function findLinkNumber(data) {
+    if (typeof data === 'string') {
+        // Проверяем, содержит ли строка ссылку
+        const linkMatch = data.match(/https:\/\/tfs-devops\.globus\.ru\/.*\/(\d+)/);
+        if (linkMatch && linkMatch[1]) {
+            return linkMatch[1]; // Возвращаем число
+        }
 
+        // Проверяем альтернативный формат ссылки
+        const altLinkMatch = data.match(/https:\/\/tfs-devops\.globus\.ru\/.*\/Epics\/\?workitem=(\d+)/);
+        if (altLinkMatch && altLinkMatch[1]) {
+            return altLinkMatch[1]; // Возвращаем число
+        }
+    } else if (typeof data === 'object' && data !== null) {
+        // Рекурсивно ищем в объекте или массиве
+        for (const key in data) {
+            const result = findLinkNumber(data[key]);
+            if (result) {
+                return result;
+            }
+        }
+    }
+    return null;
+}
                                         // Ищем ссылку в ответе
                                         linkNumber = findLinkNumber(responseDataForId) || "Без бага";
 
