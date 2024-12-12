@@ -594,7 +594,7 @@ startButton.style.top = '10px';
 startButton.style.left = '50%';
 startButton.style.transform = 'translateX(-50%)';
 startButton.style.padding = '8px 16px'; // Уменьшенные отступы
-startButton.style.backgroundColor = '#007bff';
+startButton.style.backgroundColor = '#213494';
 startButton.style.color = 'white';
 startButton.style.border = 'none';
 startButton.style.cursor = 'pointer';
@@ -607,14 +607,14 @@ startButton.style.transition = 'background-color 0.3s ease, transform 0.3s ease,
 
 // Анимация при наведении
 startButton.addEventListener('mouseover', () => {
-    startButton.style.backgroundColor = '#0056b3'; // Темнее при наведении
+    startButton.style.backgroundColor = '#152575'; // Темнее при наведении
     startButton.style.transform = 'translateX(-50%) scale(1.05)'; // Увеличиваем размер
     startButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)'; // Увеличиваем тень
 });
 
 // Возвращаем исходные стили при уходе курсора
 startButton.addEventListener('mouseout', () => {
-    startButton.style.backgroundColor = '#007bff';
+    startButton.style.backgroundColor = '#213494';
     startButton.style.transform = 'translateX(-50%) scale(1)';
     startButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
 });
