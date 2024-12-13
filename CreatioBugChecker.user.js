@@ -392,11 +392,12 @@ function displayTable(data) {
     tableContainer.style.zIndex = '10000';
     tableContainer.style.borderRadius = '8px';
     tableContainer.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-    tableContainer.style.overflow = 'hidden';
     tableContainer.style.display = 'flex';
     tableContainer.style.flexDirection = 'column';
     tableContainer.style.animation = 'slideIn 0.5s ease-in-out forwards'; // Добавляем анимацию
     tableContainer.style.border = '1px solid #eaeaea'; // Боковые рамки
+    tableContainer.style.maxHeight = '90vh'; // Максимальная высота контейнера
+    tableContainer.style.overflowY = 'auto'; // Добавляем вертикальный скроллбар при необходимости
 
     // Создаем блок статистики
     const statsContainer = document.createElement('div');
@@ -461,7 +462,7 @@ function displayTable(data) {
 
     // Создаем заголовок таблицы
     const headerRow = document.createElement('tr');
-    ['ID Заявки', 'Состояние'].forEach(headerText => {
+    ['ID Заявки', 'ID Бага', 'Состояние'].forEach(headerText => {
         const th = document.createElement('th');
         th.textContent = headerText;
         th.style.borderBottom = '2px solid #ddd';
@@ -479,12 +480,12 @@ function displayTable(data) {
         const row = document.createElement('tr');
         row.style.transition = 'background-color 0.3s ease';
 
-        // ID
+        // ID Заявки
         const idCell = document.createElement('td');
         idCell.style.borderBottom = '1px solid #eaeaea';
         idCell.style.padding = '12px 16px';
 
-        // Формируем ссылку для ID
+        // Формируем ссылку для ID Заявки
         const idLink = document.createElement('a');
         idLink.textContent = item.id;
         idLink.href = `https://cc.globus.ru/0/Nui/ViewModule.aspx#CardModuleV2/OmniTask1Page/edit/${item.id}`;
@@ -500,7 +501,35 @@ function displayTable(data) {
 
         row.appendChild(idCell);
 
-        // State
+        // ID Бага
+        const bugIdCell = document.createElement('td');
+        bugIdCell.style.borderBottom = '1px solid #eaeaea';
+        bugIdCell.style.padding = '12px 16px';
+
+        if (item.linkNumber !== "Без бага") {
+            // Создаем ссылку для ID Бага
+            const bugLink = document.createElement('a');
+            bugLink.textContent = item.linkNumber;
+            bugLink.href = `https://tfs-devops.globus.ru/DigitalOne/Dev-Support/_workitems/edit/${item.linkNumber}`;
+            bugLink.target = '_blank'; // Открываем ссылку в новом окне
+            bugLink.style.color = '#007bff';
+            bugLink.style.textDecoration = 'none';
+            bugLink.style.transition = 'color 0.3s ease';
+            bugLink.style.fontSize = '16px'; // Увеличенный размер шрифта
+            bugLink.style.fontWeight = 'normal'; // Убираем жирность
+            bugLink.addEventListener('mouseover', () => bugLink.style.color = '#0056b3');
+            bugLink.addEventListener('mouseout', () => bugLink.style.color = '#007bff');
+            bugIdCell.appendChild(bugLink);
+        } else {
+            // Если бага нет, просто текст
+            bugIdCell.textContent = item.linkNumber;
+            bugIdCell.style.fontSize = '16px'; // Увеличенный размер шрифта
+            bugIdCell.style.fontWeight = 'normal'; // Убираем жирность
+        }
+
+        row.appendChild(bugIdCell);
+
+        // Состояние
         const stateCell = document.createElement('td');
         stateCell.style.borderBottom = '1px solid #eaeaea';
         stateCell.style.padding = '12px 16px';
