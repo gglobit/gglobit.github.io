@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <title>UndefinedArrayKeyCost</title>
+    <style>
+        /* Общие стили для страницы */
+        body {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Прижимаем блоки сверху */
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Контейнер для блока с формой и таблицей */
+        .content-wrapper {
+            display: flex;
+            width: 100%;
+            height: 100%; /* Контейнер занимает всю высоту */
+            margin: 0;
+        }
+
+        /* Контейнер для ввода данных */
+        .container {
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 320px;
+            height: 100%; /* Контейнер на всю высоту */
+            box-sizing: border-box;
+        }
+
+        /* Стиль для всех дочерних элементов внутри контейнера */
+        .container > * {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background-color: #444;
+            color: #fff;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        /* Для textarea */
+        textarea {
+            resize: none;
+            overflow-y: auto;
+        }
+
+        /* Кнопка с эффектом при наведении */
+        button {
+            background-color: #6200ea;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #3700b3;
+        }
+
+        /* Контейнер для таблицы, ограничиваем его высоту на основе окна */
+        #tableContainer {
+            max-height: 100vh; /* Устанавливаем максимальную высоту на 100% от высоты экрана */
+            overflow-y: auto; /* Добавляем вертикальную прокрутку */
+            width: 100%;
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); /* То же самое, что и для контейнера формы */
+            box-sizing: border-box;
+        }
+
+        /* Стиль для самой таблицы */
+        table {
+            margin-top: 20px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        /* Стиль для рамки таблицы и ячеек */
+        table, th, td {
+            border: 1px solid #444;
+        }
+
+        /* Стиль для ячеек таблицы */
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        /* Стиль для заголовков */
+        th {
+            background-color: #333;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        /* Стиль для данных ячеек */
+        td {
+            background-color: #555;
+        }
+
+        /* Стиль для ячеек, на которые можно кликнуть */
+        .copyable {
+            cursor: pointer;
+            user-select: none; /* Запрещаем выделение текста */
+        }
+
+        /* Стиль для анимации при копировании */
+        .copyable.copied {
+            background-color: #014701; /* Зеленый фон при копировании */
+            transition: background-color 0.1s ease;
+        }
+
+        /* Стиль для успешных тестов */
+        .success {
+            background-color: #2caa2c; /* Зеленый фон для успешного теста */
+        }
+
+        /* Стиль для неуспешных тестов */
+        .error {
+            background-color: #d32f2f; /* Красный фон для неуспешного теста */
+        }
+
+        /* Стиль для столбцов с результатами тестов */
+        .result {
+            width: 80px;
+        }
+    </style>
+</head>
+<body>
+    <div class="content-wrapper">
+        <!-- Форма для ввода данных слева -->
+        <div class="container">
+            <select id="storeSelect">
+                <option value="5002">Климовск (5002)</option>
+                <option value="5010">Королёв (5010)</option>
+                <option value="5011">Красногорск (5011)</option>
+                <option value="5012">Тверь (5012)</option>
+                <option value="5014">Пушкино (5014)</option>
+                <option value="5015">Одинцово (5015)</option>
+                <option value="5016">Котельники (5016)</option>
+                <option value="5020">Медведково (5020)</option>
+                <option value="5024">Косино (5024)</option>
+            </select>
+            <textarea id="textInput" placeholder="Введите ID..." rows="20" oninput="updateButtonText()"></textarea>
+            <button id="checkButton" onclick="processIDs()">Проверить</button>
+        </div>
+
+        <!-- Динамическая таблица справа -->
+        <div id="tableContainer"></div>
+    </div>
+
+    <script>
+        function updateButtonText() {
+            const textInput = document.getElementById('textInput');
+            const lines = textInput.value.split('\n').length;
+            document.getElementById('checkButton').textContent = `Проверить (${lines})`;
+        }
+
+        async function processIDs() {
+            const textInput = document.getElementById('textInput');
+            const storeSelect = document.getElementById('storeSelect');
+            const storeId = storeSelect.value;
+            const lines = textInput.value.split('\n');
+
+            // Убираем пустые строки и лишние пробелы
+            const cleanedLines = lines
+                .map(line => line.trim())
+                .filter(line => line !== '');
+
+            // Создаём таблицу для отображения результатов
+            const tableContainer = document.getElementById('tableContainer');
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Ответ</th>
+                            <th>stateId</th>
+                            <th>sellType</th>
+                            <th>tariffingPrice</th>
+                            <th>regularPrice</th>
+                            <th>orderPrice</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            // Добавляем строки в таблицу с начальным состоянием
+            cleanedLines.forEach(id => {
+                const rowId = id.replace(/[^a-zA-Z0-9]/g, '_');
+                tableHTML += `
+                    <tr id="row_${rowId}">
+                        <td id="id_${rowId}" class="copyable">${id}</td>
+                        <td id="response_${rowId}" class="result"></td>
+                        <td id="state_${rowId}" class="result"></td>
+                        <td id="sellType_${rowId}" class="result"></td>
+                        <td id="tariffingPrice_${rowId}" class="result"></td>
+                        <td id="regularPrice_${rowId}" class="result"></td>
+                        <td id="orderPrice_${rowId}" class="result"></td>
+                    </tr>
+                `;
+            });
+
+            // Закрываем таблицу и вставляем её в контейнер
+            tableHTML += `</tbody></table>`;
+            tableContainer.innerHTML = tableHTML;
+
+            // Для каждого ID выполняем запрос
+            for (const id of cleanedLines) {
+                const rowId = id.replace(/[^a-zA-Z0-9]/g, '_');
+                const url = `https://d1.globus.ru/product/Product/GetShortProductsOmsByIds?ids=${id}&storeId=${storeId}&channelId=15`;
+
+                try {
+                    const response = await fetch(url);
+                    const responseCell = document.getElementById(`response_${rowId}`);
+                    const stateCell = document.getElementById(`state_${rowId}`);
+                    const sellTypeCell = document.getElementById(`sellType_${rowId}`);
+                    const tariffingPriceCell = document.getElementById(`tariffingPrice_${rowId}`);
+                    const regularPriceCell = document.getElementById(`regularPrice_${rowId}`);
+                    const orderPriceCell = document.getElementById(`orderPrice_${rowId}`);
+
+                    // Проверка первого теста: статус ответа
+                    if (response.status === 200) {
+                        responseCell.textContent = '✅';  // Галочка для успешного ответа
+                        responseCell.classList.add("success");
+
+                        const data = await response.json();
+                        if (data.productsOms.length > 0) {
+                            const product = data.productsOms[0];
+                            const stateId = product.availability.stateId;
+                            const sellType = product.priceParams.sellType;
+                            const tariffingPrice = product.priceParams.tariffingPrice;
+                            const regularPrice = product.priceParams.regularPrice;
+                            const orderPrice = product.priceParams.orderPrice;
+
+                            // Заполнение ячеек с данными
+                            sellTypeCell.textContent = sellType !== null ? sellType : "null";
+                            tariffingPriceCell.textContent = tariffingPrice !== null ? tariffingPrice : "null";
+                            regularPriceCell.textContent = regularPrice !== null ? regularPrice : "null";
+                            orderPriceCell.textContent = orderPrice !== null ? orderPrice : "null";
+
+                            // Проверка на 0.0 или null для цен и типа продажи
+                            const checkPrice = (price) => price === 0.0 || price === null;
+
+                            // Применяем проверку к полям
+                            if (checkPrice(sellType)) {
+                                sellTypeCell.classList.add("error");
+                            } else {
+                                sellTypeCell.classList.add("success");
+                            }
+
+                            if (checkPrice(tariffingPrice)) {
+                                tariffingPriceCell.classList.add("error");
+                            } else {
+                                tariffingPriceCell.classList.add("success");
+                            }
+
+                            if (checkPrice(regularPrice)) {
+                                regularPriceCell.classList.add("error");
+                            } else {
+                                regularPriceCell.classList.add("success");
+                            }
+
+                            if (checkPrice(orderPrice)) {
+                                orderPriceCell.classList.add("error");
+                            } else {
+                                orderPriceCell.classList.add("success");
+                            }
+
+                            // Проверка для stateId
+                            stateCell.textContent = stateId;
+
+                            if (stateId === 2 || stateId === 4) {
+                                stateCell.classList.add("error");
+                            } else {
+                                stateCell.classList.add("success");
+                            }
+
+                        } else {
+                            responseCell.classList.add("error");
+                            stateCell.textContent = "N/A";
+                            stateCell.classList.add("error");
+                        }
+                    } else {
+                        responseCell.classList.add("error");
+                        stateCell.textContent = "N/A";
+                        stateCell.classList.add("error");
+                    }
+                } catch (error) {
+                    const responseCell = document.getElementById(`response_${rowId}`);
+                    const stateCell = document.getElementById(`state_${rowId}`);
+                    responseCell.classList.add("error");
+                    stateCell.textContent = "Ошибка";
+                    console.error(`Ошибка при запросе ID ${id}:`, error);
+                }
+            }
+
+            // Добавляем обработчик для копирования ID
+            const copyableCells = document.querySelectorAll('.copyable');
+            copyableCells.forEach(cell => {
+                cell.addEventListener('click', () => {
+                    const text = cell.textContent;
+                    navigator.clipboard.writeText(text).then(() => {
+                        // Анимация успешного копирования
+                        cell.classList.add('copied');
+
+                        // Убираем анимацию через некоторое время
+                        setTimeout(() => {
+                            cell.classList.remove('copied');
+                        }, 1000);
+                    });
+                });
+            });
+        }
+    </script>
+</body>
+</html>

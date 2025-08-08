@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogParser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Стили для скролл-бара */
+        ::-webkit-scrollbar {
+            width: 18px;
+            height: 20px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background-color: #333;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 10px;
+            border: 3px solid #333;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: #888;
+        }
+
+        ::-webkit-scrollbar-corner {
+            background-color: #333;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            display: flex;
+            height: 100vh;
+            margin: 20px;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            gap: 10px;
+        }
+
+        .left {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 10px;
+            height: 100%;
+            min-height: 400px;
+        }
+
+        .text-block {
+            background-color: #1e1e1e;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            overflow: auto;
+        }
+
+        .textarea-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .left textarea {
+            width: 100%;
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 1rem;
+            resize: none;
+            outline: none;
+            flex-grow: 1;
+            min-height: 150px;
+        }
+
+        .copyable {
+            cursor: pointer;
+            position: relative;
+            display: inline-block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .copyable:hover {
+            background-color: #444;
+        }
+
+        .copied {
+            background-color: #4caf50;
+            color: #121212;
+        }
+
+        .copied:after {
+            content: " (Скопировано)";
+            font-size: 0.8rem;
+            color: #e0e0e0;
+            margin-left: 5px;
+        }
+
+        .right {
+            width: 50%;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 100%;
+            position: relative;
+        }
+
+		pre {
+			background-color: #333;
+			padding: 10px;
+			border-radius: 8px;
+			color: #e0e0e0;
+			font-size: 1rem;
+			overflow-x: auto;
+			white-space: pre-wrap;
+			word-wrap: break-word;
+			line-height: 1;  /* Уменьшаем расстояние между строками */
+		}
+
+
+        .highlight-order {
+            background-color: #4caf50;
+            color: #121212;
+            font-weight: bold;
+        }
+
+        .highlight-error {
+            background-color: #f44336;
+            color: #121212;
+            font-weight: bold;
+        }
+
+        .json-line {
+            display: block;
+        }
+
+        .floating-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .floating-button {
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.3s;
+            display: none;
+        }
+
+        .floating-button:hover {
+            opacity: 0.8;
+        }
+
+        .floating-button--error {
+            background-color: #f44336;
+        }
+
+        .floating-button--error:hover {
+            background-color: #e53935;
+        }
+
+        .floating-button--order {
+            background-color: #4caf50;
+        }
+
+        .floating-button--order:hover {
+            background-color: #388e3c;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="left">
+            <div class="textarea-container">
+                <textarea id="jsonInput" placeholder="Введите JSON текст..."></textarea>
+            </div>
+            <div class="text-block">
+                <p>ID Заказа: <span id="orderId" class="copyable"></span></p>
+                <p>Ошибка: <span id="errorMessage" class="copyable"></span></p>
+            </div>
+        </div>
+
+        <div class="right">
+            <div class="text-block">
+                <pre id="formattedjson"></pre>
+            </div>
+
+            <div class="floating-button-container">
+                <button class="floating-button floating-button--order" id="scrollToOrderIdBtn">ID</button>
+                <button class="floating-button floating-button--error" id="scrollToMessageBtn">Error</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const jsonInput = document.getElementById('jsonInput');
+        const orderIdSpan = document.getElementById('orderId');
+        const errorMessageSpan = document.getElementById('errorMessage');
+        const formattedJsonPre = document.getElementById('formattedjson');
+        const scrollToOrderIdBtn = document.getElementById('scrollToOrderIdBtn');
+        const scrollToMessageBtn = document.getElementById('scrollToMessageBtn');
+
+        function extractOrderIdAndError() {
+            try {
+                const jsonObject = JSON.parse(jsonInput.value);
+
+                if (jsonObject.message && jsonObject.message.request_body && jsonObject.message.request_body.order) {
+                    const orderId = jsonObject.message.request_body.order.order_id;
+                    orderIdSpan.textContent = orderId ? orderId : 'Не найдено';
+                } else {
+                    orderIdSpan.textContent = 'Не найдено';
+                }
+
+                if (jsonObject.message && jsonObject.message.response_body && jsonObject.message.response_body.errors && Array.isArray(jsonObject.message.response_body.errors) && jsonObject.message.response_body.errors.length > 0) {
+                    const errorText = jsonObject.message.response_body.errors[0].message;
+                    const errorFragment = cleanErrorMessage(errorText);
+                    errorMessageSpan.textContent = errorFragment;
+                } else {
+                    errorMessageSpan.textContent = 'Не найдено';
+                }
+
+                const formattedJson = formatJsonWithLineNumbers(jsonObject);
+                formattedJsonPre.innerHTML = formattedJson;
+
+                const positionOrderId = getOrderIdPosition(jsonObject);
+                const positionMessage = getErrorMessagePosition(jsonObject);
+
+                scrollToOrderIdBtn.style.display = positionOrderId !== null ? 'block' : 'none';
+                scrollToMessageBtn.style.display = positionMessage !== null ? 'block' : 'none';
+
+            } catch (e) {
+                orderIdSpan.textContent = 'Ошибка в JSON';
+                errorMessageSpan.textContent = 'Ошибка в JSON';
+                formattedJsonPre.textContent = 'Ошибка в JSON';
+                scrollToOrderIdBtn.style.display = 'none';
+                scrollToMessageBtn.style.display = 'none';
+            }
+        }
+
+        function cleanErrorMessage(errorText) {
+            let cleanedText = errorText.replace(/\\\"/g, '"');
+            cleanedText = cleanedText.replace(/\"/g, '');
+            return cleanedText;
+        }
+
+        function formatJsonWithLineNumbers(jsonObject) {
+            const jsonString = JSON.stringify(jsonObject, null, 2);
+            const lines = jsonString.split('\n');
+            return lines.map((line, index) => {
+                return `<span class="json-line" id="line-${index}">${line}</span>`;
+            }).join('\n');
+        }
+
+        function getOrderIdPosition(jsonObject) {
+            const jsonString = JSON.stringify(jsonObject, null, 2);
+            const orderIdMatch = jsonString.match(/"order_id":\s*"/);
+            if (orderIdMatch) {
+                const orderIdLineIndex = jsonString.substring(0, orderIdMatch.index).split('\n').length - 1;
+                return orderIdLineIndex;
+            }
+            return null;
+        }
+
+        function getErrorMessagePosition(jsonObject) {
+            const jsonString = JSON.stringify(jsonObject, null, 2);
+            const errorMessageMatch = jsonString.match(/"message":\s*"/);
+            if (errorMessageMatch) {
+                const errorMessageLineIndex = jsonString.substring(0, errorMessageMatch.index).split('\n').length - 1;
+                return errorMessageLineIndex;
+            }
+            return null;
+        }
+
+        function scrollToJsonLine(position) {
+            if (position !== null) {
+                const line = document.getElementById(`line-${position}`);
+                if (line) {
+                    line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    line.classList.add(position === getOrderIdPosition(JSON.parse(jsonInput.value)) ? 'highlight-order' : 'highlight-error');
+                }
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                console.log("Текст скопирован в буфер обмена");
+            }).catch(err => {
+                console.error("Ошибка при копировании в буфер обмена", err);
+            });
+        }
+
+        jsonInput.addEventListener('input', extractOrderIdAndError);
+
+        scrollToOrderIdBtn.addEventListener('click', () => {
+            const position = getOrderIdPosition(JSON.parse(jsonInput.value));
+            scrollToJsonLine(position);
+        });
+
+        scrollToMessageBtn.addEventListener('click', () => {
+            const position = getErrorMessagePosition(JSON.parse(jsonInput.value));
+            scrollToJsonLine(position);
+        });
+
+        orderIdSpan.addEventListener('click', () => {
+            copyToClipboard(orderIdSpan.textContent);
+            orderIdSpan.classList.add('copied');
+            setTimeout(() => orderIdSpan.classList.remove('copied'), 2000);
+        });
+
+        errorMessageSpan.addEventListener('click', () => {
+            copyToClipboard(errorMessageSpan.textContent);
+            errorMessageSpan.classList.add('copied');
+            setTimeout(() => errorMessageSpan.classList.remove('copied'), 2000);
+        });
+
+    </script>
+
+</body>
+</html>
