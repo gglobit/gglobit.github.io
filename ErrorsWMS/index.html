@@ -149,48 +149,50 @@
             }
             
             // Показать случайное видео
-                show() {
-                    if (this.isShowing) {
-                        return;
-                    }
-                    this.isShowing = true;
-                    // Выбираем случайное видео
-                    const randomIndex = Math.floor(Math.random() * this.gifs.length);
-                    const selectedVideo = this.gifs[randomIndex];
-                    // Создаем новый видео элемент с playsinline и controls для максимальной совместимости
-                    const videoHTML = `
-                        <video class="loading-gif" autoplay loop muted playsinline controls style="max-width:320px;display:block;margin:auto;">
-                            <source src="${selectedVideo}" type="video/webm">
-                            Ваш браузер не поддерживает видео.
-                        </video>
-                    `;
-                    this.loadingElement.innerHTML = videoHTML;
-                    this.loadingElement.style.display = 'block';
-                    // Добавляем обработчики
-                    const video = this.loadingElement.querySelector('video');
-                    if (video) {
-                        // Принудительно запускаем видео
-                        setTimeout(() => {
-                            if (video.paused) {
-                                video.play().catch(() => {});
-                            }
-                        }, 10);
-                        video.addEventListener('canplay', () => {
-                            if (video.paused) {
-                                video.play().catch(() => {});
-                            }
-                        });
-                        video.addEventListener('error', () => {
-                            this.onError();
-                        });
-                        const source = video.querySelector('source');
-                        if (source) {
-                            source.addEventListener('error', () => {
-                                this.onError();
-                            });
-                        }
-                    }
+            show() {
+                if (this.isShowing) {
+                    return;
                 }
+                this.isShowing = true;
+                
+                // Выбираем случайное видео
+                const randomIndex = Math.floor(Math.random() * this.gifs.length);
+                const selectedVideo = this.gifs[randomIndex];
+                
+                // Простое создание видео без лишних атрибутов
+                const videoHTML = `
+                    <video class="loading-gif" autoplay loop muted playsinline 
+                           style="max-width:300px;height:auto;display:block;margin:20px auto;border-radius:8px;">
+                        <source src="${selectedVideo}" type="video/webm">
+                        <div style="text-align:center;color:#999;padding:20px;">⚡ Загрузка...</div>
+                    </video>
+                `;
+                
+                this.loadingElement.innerHTML = videoHTML;
+                this.loadingElement.style.display = 'block';
+                
+                // Принудительный запуск видео
+                const video = this.loadingElement.querySelector('video');
+                if (video) {
+                    // Обработка загрузки
+                    video.addEventListener('loadeddata', () => {
+                        video.play().catch(e => console.log('Autoplay blocked:', e));
+                    });
+                    
+                    // Fallback через таймер
+                    setTimeout(() => {
+                        if (video.paused) {
+                            video.play().catch(() => {});
+                        }
+                    }, 100);
+                    
+                    // Обработка ошибок
+                    video.addEventListener('error', () => {
+                        console.log('Video error for:', selectedVideo);
+                        this.onError();
+                    });
+                }
+            }
             
             // Скрыть видео
             hide() {
