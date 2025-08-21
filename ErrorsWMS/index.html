@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+        <title>Анализ ошибок из писем</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+        <script src="email-parser.js"></script>
+        <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="main-content upload-mode" id="mainContent">
+        <div class="detailed-reports">
+            <div id="reports" class="report"></div>
+        </div>
+        <div class="upload-panel" id="uploadPanel">
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('msgFiles').click()">
+                <div class="main-text">📁 Перетащите сюда 9 сообщений</div>
+                <input type="file" id="msgFiles" multiple accept=".msg" style="display:none;">
+            </div>
+        </div>
+        <div class="summary-panel">
+            <!-- Форма письма для отправки -->
+            <div class="email-form-area">
+                <h3>� Письмо с отчетом</h3>
+                <div class="email-form">
+                    <div class="form-group">
+                        <label for="emailRecipients">Получатели:</label>
+                        <textarea id="emailRecipients" placeholder="Получатели будут загружены из MSG файлов..." readonly></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="emailSubject">Тема:</label>
+                        <input type="text" id="emailSubject" value="" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="emailBody">Текст письма:</label>
+                        <textarea id="emailBody" placeholder="Отчет будет сформирован после обработки файлов..." readonly></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="emailSignature">Подпись:</label>
+                        <textarea id="emailSignature" placeholder="Введите вашу подпись..."></textarea>
+                    </div>
+                    <button class="send-email-button" id="sendEmailButton" onclick="openEmailClient()" disabled>📧 Открыть в почтовом клиенте</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="loading">
+        <!-- Видео будет создаваться динамически -->
+    </div>
+    
+    <!-- Контейнер для системы алертов -->
+    <div class="alert-container" id="alertContainer"></div>
+    
+    <script>
+        // Система управления алертами
+        class AlertManager {
+            constructor() {
+                this.container = document.getElementById('alertContainer');
+                this.alertCounter = 0;
+            }
+            
+            showAlert(type, title, message, details = null) {
+                this.alertCounter++;
+                const alertId = `alert-${this.alertCounter}`;
+                
+                const alertElement = document.createElement('div');
+                alertElement.className = `alert-item alert-${type}`;
+                alertElement.id = alertId;
+                
+                alertElement.innerHTML = `
+                    <div class="alert-header">
+                        <h4 class="alert-title">${this.getIcon(type)} ${title}</h4>
+                        <button class="alert-close" onclick="alertManager.closeAlert('${alertId}')">&times;</button>
+                    </div>
+                    <p class="alert-message">${message}</p>
+                    ${details ? `<div class="alert-details">${details}</div>` : ''}
+                `;
+                
+                this.container.appendChild(alertElement);
+                
+                // Ограничиваем количество алертов (максимум 8)
+                const alerts = this.container.querySelectorAll('.alert-item');
+                if (alerts.length > 8) {
+                    this.closeAlert(alerts[0].id);
+                }
+                
+                return alertId;
+            }
+            
+            closeAlert(alertId) {
+                const alert = document.getElementById(alertId);
+                if (alert && !alert.classList.contains('removing')) {
+                    alert.classList.add('removing');
+                    setTimeout(() => {
+                        if (alert.parentNode) {
+                            alert.parentNode.removeChild(alert);
+                        }
+                    }, 300);
+                }
+            }
+            
+            getIcon(type) {
+                const icons = {
+                    'warning': '⚠️',
+                    'error': '❌',
+                    'info': 'ℹ️'
+                };
+                return icons[type] || 'ℹ️';
+            }
+            
+            // Специальные методы для различных типов уведомлений
+            warning(title, message, details) {
+                return this.showAlert('warning', title, message, details);
+            }
+            
+            error(title, message, details) {
+                return this.showAlert('error', title, message, details);
+            }
+            
+            info(title, message, details) {
+                return this.showAlert('info', title, message, details);
+            }
+        }
+        
+        // Создаем глобальный экземпляр менеджера алертов
+        const alertManager = new AlertManager();
+        
+        // Система случайных гифок для загрузки (ПРОСТОЙ подход как в тесте)
+        class LoadingGifManager {
+            constructor() {
+                // Набор WebM файлов (как в тестовом файле)
+                this.gifs = [
+                    './webm/aesthetic_possum_by_fstikbot_agadywoaajwomug_AgADYWoAAjwomUg.webm',
+                    './webm/kitties4bynorufx_by_fstikbot_agad2bsaapplaus_AgAD2BsAApPLAUs.webm',
+                    './webm/kitties4bynorufx_by_fstikbot_agadzrwaanlkaafl_AgADzRwAAnLkAAFL.webm',
+                    './webm/sadcattwitch_by_fstikbot_agadq2gaagdgsug_AgADq2gAAgdGSUg.webm',
+                    './webm/tinycatss_agad03maanpukek_AgAD03MAAnpuKEk.webm',
+                    './webm/tinycatss_agadg2kaarzfseg_AgADg2kAArZFsEg.webm',
+                    './webm/vikostvspack_agad2zsaamelaafk_AgAD2zsAAmeLAAFK.webm',
+                    './webm/vikostvspack_agad6d4aatdsweo_AgAD6D4AAtdsWEo.webm',
+                    './webm/vikostvspack_agadfgcaapzjues_AgADfGcAApzJUEs.webm',
+                    './webm/vikostvspack_agadndwaavuqieo_AgADNDwAAvuqIEo.webm',
+                    './webm/vikostvspack_agadxweaamgokeg_AgADXWEAAmGoKEg.webm',
+                    './webm/whitehamsterwow_agadbn8aajrngus_AgADBn8AAjRNGUs.webm'
+                ];
+                
+                this.loadingElement = document.getElementById('loading');
+                this.isShowing = false;
+            }
+            
+            // Показать случайное видео
+            show() {
+                if (this.isShowing) {
+                    return;
+                }
+                
+                this.isShowing = true;
+                
+                // Выбираем случайное видео
+                const randomIndex = Math.floor(Math.random() * this.gifs.length);
+                const selectedVideo = this.gifs[randomIndex];
+                
+                // Создаем новый видео элемент
+                const videoHTML = `
+                    <video class="loading-gif" autoplay loop muted>
+                        <source src="${selectedVideo}" type="video/webm">
+                        Ваш браузер не поддерживает видео.
+                    </video>
+                `;
+                
+                this.loadingElement.innerHTML = videoHTML;
+                this.loadingElement.style.display = 'block';
+                
+                // Добавляем обработчики
+                const video = this.loadingElement.querySelector('video');
+                
+                if (video) {
+                    // Принудительно запускаем видео
+                    setTimeout(() => {
+                        if (video.paused) {
+                            video.play().catch(() => {});
+                        }
+                    }, 10);
+                    
+                    video.addEventListener('canplay', () => {
+                        if (video.paused) {
+                            video.play().catch(() => {});
+                        }
+                    });
+                    
+                    video.addEventListener('error', () => {
+                        this.onError();
+                    });
+                    
+                    const source = video.querySelector('source');
+                    if (source) {
+                        source.addEventListener('error', () => {
+                            this.onError();
+                        });
+                    }
+                }
+            }
+            
+            // Скрыть видео
+            hide() {
+                if (!this.isShowing) {
+                    return;
+                }
+                
+                this.isShowing = false;
+                this.loadingElement.style.display = 'none';
+                this.loadingElement.innerHTML = '';
+            }
+            
+            // Fallback при ошибке
+            onError() {
+                if (!this.isShowing) {
+                    return;
+                }
+                
+                this.loadingElement.innerHTML = `
+                    <div style="color: #4c6ef5; font-size: 18px; font-weight: bold; text-align: center;">
+                        ⚡ Обработка файлов...
+                    </div>
+                `;
+            }
+        }
+        
+        // Создаем глобальный экземпляр менеджера гифок
+        const loadingGifManager = new LoadingGifManager();
+
+        // Инициализация формы письма при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            // Инициализируем тему письма с правильной датой
+            const now = new Date();
+            
+            // Если сейчас до 8 утра, используем вчерашнюю дату
+            const reportDate = now.getHours() < 8 
+                ? new Date(now.getTime() - 24 * 60 * 60 * 1000) // Вчера
+                : now; // Сегодня
+            
+            const dateStr = reportDate.toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit', 
+                year: 'numeric'
+            });
+            
+            document.getElementById('emailSubject').value = `WMS ошибки за сутки от ${dateStr}`;
+            
+            // Загружаем подпись из кэша
+            loadSignatureFromCache();
+            
+            // Простое автосохранение подписи
+            const signatureElement = document.getElementById('emailSignature');
+            signatureElement.addEventListener('input', function() {
+                saveSignatureToCache();
+            });
+        });
+
+        // Парсер MSG файлов для извлечения Excel вложений
+        function parseMSGFile(arrayBuffer) {
+            const view = new DataView(arrayBuffer);
+            const attachments = [];
+            
+            // Поиск ZIP сигнатур (основа XLSX файлов)
+            const zipSignature = [0x50, 0x4B, 0x03, 0x04];
+            const maxSearch = Math.min(view.byteLength, 10000000); // Ограничиваем поиск 10MB
+            let foundPositions = [];
+            
+            for (let i = 0; i < maxSearch - 4; i += 1) {
+                if (view.getUint8(i) === zipSignature[0] &&
+                    view.getUint8(i + 1) === zipSignature[1] &&
+                    view.getUint8(i + 2) === zipSignature[2] &&
+                    view.getUint8(i + 3) === zipSignature[3]) {
+                    foundPositions.push(i);
+                }
+            }
+            
+            // Обработка найденных позиций
+            for (const startPos of foundPositions.slice(0, 5)) { // Проверяем до 5 позиций
+                try {
+                    const remainingBytes = view.byteLength - startPos;
+                    const testSizes = [
+                        Math.min(1000000, remainingBytes),  // 1MB 
+                        Math.min(2000000, remainingBytes),  // 2MB
+                        remainingBytes  // Весь остаток
+                    ];
+                    
+                    for (const testSize of testSizes) {
+                        if (testSize < 1000) continue;
+                        
+                        try {
+                            const excelData = arrayBuffer.slice(startPos, startPos + testSize);
+                            
+                            // Быстрая проверка на наличие Excel маркеров
+                            const preCheck = new Uint8Array(excelData.slice(0, Math.min(1000, excelData.byteLength)));
+                            const preCheckStr = new TextDecoder('utf-8', {fatal: false}).decode(preCheck);
+                            
+                            if (preCheckStr.includes('xl/') || preCheckStr.includes('workbook') || 
+                                preCheckStr.includes('[Content_Types]')) {
+                                
+                                const testWorkbook = XLSX.read(excelData, {
+                                    type: 'array', 
+                                    bookVBA: false, 
+                                    bookProps: false,
+                                    cellStyles: false
+                                });
+                                
+                                if (testWorkbook.SheetNames && testWorkbook.SheetNames.length > 0) {
+                                    attachments.push({
+                                        fileName: `excel_${attachments.length + 1}.xlsx`,
+                                        content: excelData,
+                                        size: testSize,
+                                        position: startPos
+                                    });
+                                    break;
+                                }
+                            }
+                        } catch (testError) {
+                            continue;
+                        }
+                    }
+                } catch (e) {
+                    continue;
+                }
+                
+                if (attachments.length >= 1) break; // Один файл достаточно
+            }
+            
+            // Альтернативный поиск по Excel маркерам (если основной не сработал)
+            if (attachments.length === 0) {
+                const excelMarkers = ['xl/workbook.xml', 'xl/worksheets/', '[Content_Types].xml'];
+                const blockSize = 4096;
+                let foundMarkers = [];
+                
+                for (let i = 0; i < view.byteLength - blockSize; i += blockSize) {
+                    try {
+                        const block = arrayBuffer.slice(i, Math.min(i + blockSize, view.byteLength));
+                        const blockStr = new TextDecoder('utf-8', {fatal: false}).decode(block);
+                        
+                        for (const marker of excelMarkers) {
+                            if (blockStr.includes(marker)) {
+                                foundMarkers.push(i);
+                                break;
+                            }
+                        }
+                        
+                        if (foundMarkers.length >= 2) break;
+                    } catch (e) {
+                        continue;
+                    }
+                }
+                
+                // Поиск ZIP сигнатур рядом с маркерами
+                for (const markerPos of foundMarkers) {
+                    const searchStart = Math.max(0, markerPos - 51200); // 50KB назад
+                    const searchEnd = Math.min(view.byteLength - 4, markerPos + 51200); // 50KB вперед
+                    
+                    for (let j = searchStart; j < searchEnd; j += 1) {
+                        if (view.getUint8(j) === 0x50 && view.getUint8(j + 1) === 0x4B) {
+                            try {
+                                const remainingSize = view.byteLength - j;
+                                const excelData = arrayBuffer.slice(j, j + Math.min(2000000, remainingSize));
+                                const testWorkbook = XLSX.read(excelData, {type: 'array', bookVBA: false});
+                                
+                                if (testWorkbook.SheetNames && testWorkbook.SheetNames.length > 0) {
+                                    attachments.push({
+                                        fileName: `recovered_excel.xlsx`,
+                                        content: excelData,
+                                        size: excelData.byteLength,
+                                        position: j
+                                    });
+                                    return { attachments };
+                                }
+                            } catch (e) {
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return { attachments };
+        }
+
+        // Функция категоризации ошибок
+        function categorizeErrors(errorRows) {
+            let hasAlerts = false;
+            let hasIgnored = false;
+            
+            if (!errorRows || errorRows.length === 0) {
+                return 'clean';
+            }
+            
+            for (const error of errorRows) {
+                const nodeText = error.node || '';
+                
+                // Проверяем узел на наличие ключевых фраз для игнорирования
+                if (nodeText.includes('Фоновое задание. Ошибка выполнения') || 
+                    nodeText.includes('Обмен.')) {
+                    hasIgnored = true;
+                } else {
+                    // Любой другой узел считается алертом
+                    hasAlerts = true;
+                }
+            }
+            
+            // Алерты имеют приоритет над игнорируемыми ошибками
+            if (hasAlerts) {
+                return 'alerts';
+            } else if (hasIgnored) {
+                return 'ignore';
+            } else {
+                return 'clean';
+            }
+        }
+        
+        // Функция генерации краткого отчёта
+        function generateSummaryText(results) {
+            const categories = {
+                clean: [],
+                ignore: [],
+                alerts: []
+            };
+            
+            // Группируем результаты по категориям
+            results.forEach(result => {
+                if (result.status === 'success') {
+                    const category = categorizeErrors(result.errorRows);
+                    categories[category].push(result.dbCode);
+                }
+            });
+            
+            // Сортируем коды баз данных
+            Object.keys(categories).forEach(key => {
+                categories[key].sort();
+            });
+            
+            // Формируем текст отчёта
+            let summaryText = '';
+            
+            if (categories.clean.length > 0) {
+                summaryText += `Ошибок нет: ${categories.clean.join(', ')}\n`;
+            }
+            
+            if (categories.ignore.length > 0) {
+                summaryText += `Игнорировать: ${categories.ignore.join(', ')}\n`;
+            }
+            
+            if (categories.alerts.length > 0) {
+                summaryText += `Обработано в рамках алертов: ${categories.alerts.join(', ')}\n`;
+            }
+            
+            if (summaryText === '') {
+                summaryText = 'Нет успешно обработанных файлов для отчёта';
+            }
+            
+            return summaryText.trim();
+        }
+        
+        // Функция копирования отчёта в буфер обмена
+        function copySummaryToClipboard() {
+            const summaryText = document.getElementById('summaryText').textContent;
+            navigator.clipboard.writeText(summaryText).then(() => {
+                const button = document.querySelector('.copy-button');
+                const originalText = button.textContent;
+                button.textContent = '✅ Скопировано!';
+                button.style.background = '#10b981';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '#3b82f6';
+                }, 2000);
+            }).catch(() => {
+                alert('Не удалось скопировать в буфер обмена');
+            });
+        }
+
+        // Глобальные переменные для email
+        let globalRecipients = new Set();
+        let globalEmailData = null;
+
+        // Функции для работы с кэшем подписи
+        function saveSignatureToCache() {
+            const signatureElement = document.getElementById('emailSignature');
+            const signatureText = signatureElement.value;
+            localStorage.setItem('emailSignature', signatureText);
+        }
+
+        function loadSignatureFromCache() {
+            const cachedSignature = localStorage.getItem('emailSignature');
+            const signatureElement = document.getElementById('emailSignature');
+            
+            if (cachedSignature) {
+                signatureElement.value = cachedSignature;
+            } else {
+                // Устанавливаем подпись по умолчанию
+                const defaultSignature = ``;
+                signatureElement.value = defaultSignature;
+                saveSignatureToCache();
+            }
+        }
+
+        function getSignatureAsText() {
+            const signatureElement = document.getElementById('emailSignature');
+            return signatureElement.value || '';
+        }
+
+        // Функция для извлечения получателей из MSG файлов
+        async function extractRecipientsFromFiles(files) {
+            globalRecipients.clear();
+            
+            for (const file of files) {
+                try {
+                    // Используем функцию из email-parser.js
+                    const recipients = await parseEmailRecipients(file);
+                    
+                    // Собираем ВСЕХ получателей из всех полей
+                    if (recipients.to && recipients.to.length > 0) {
+                        recipients.to.forEach(email => globalRecipients.add(email));
+                    }
+                    if (recipients.cc && recipients.cc.length > 0) {
+                        recipients.cc.forEach(email => globalRecipients.add(email));
+                    }
+                    if (recipients.bcc && recipients.bcc.length > 0) {
+                        recipients.bcc.forEach(email => globalRecipients.add(email));
+                    }
+                    if (recipients.from && recipients.from.length > 0) {
+                        recipients.from.forEach(email => globalRecipients.add(email));
+                    }
+                    if (recipients.replyTo && recipients.replyTo.length > 0) {
+                        recipients.replyTo.forEach(email => globalRecipients.add(email));
+                    }
+                    if (recipients.other && recipients.other.length > 0) {
+                        recipients.other.forEach(email => globalRecipients.add(email));
+                    }
+                    
+                    console.log(`Файл ${file.name}: TO=${recipients.to?.length || 0}, CC=${recipients.cc?.length || 0}, BCC=${recipients.bcc?.length || 0}, FROM=${recipients.from?.length || 0}, OTHER=${recipients.other?.length || 0}`);
+                    
+                } catch (error) {
+                    console.warn(`Не удалось извлечь получателей из ${file.name}:`, error);
+                    alertManager.warning(
+                        'Ошибка парсинга получателей',
+                        `Не удалось извлечь получателей из файла ${file.name}`,
+                        error.message
+                    );
+                }
+            }
+            
+            // Фильтруем и очищаем email адреса
+            const validRecipients = Array.from(globalRecipients)
+                .filter(email => {
+                    // Базовая валидация email
+                    return email && 
+                           typeof email === 'string' && 
+                           email.includes('@') && 
+                           email.length > 5 &&
+                           email.length < 255 && // RFC ограничение
+                           !email.includes(' ') && // Пробелы недопустимы
+                           !email.toLowerCase().endsWith('.su') && // Исключаем домены .su
+                           /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); // Базовый regex
+                })
+                .map(email => email.toLowerCase().trim())
+                .sort();
+            
+            console.log(`Итого найдено уникальных получателей: ${validRecipients.length}`);
+            console.log('Примеры получателей:', validRecipients.slice(0, 10));
+            
+            return validRecipients;
+        }
+
+        // Функция формирования данных письма
+        function generateEmailData(results) {
+            const now = new Date();
+            
+            // Если сейчас до 8 утра, используем вчерашнюю дату
+            const reportDate = now.getHours() < 8 
+                ? new Date(now.getTime() - 24 * 60 * 60 * 1000) // Вчера
+                : now; // Сегодня
+            
+            const dateStr = reportDate.toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit', 
+                year: 'numeric'
+            });
+            
+            const subject = `WMS ошибки за сутки от ${dateStr}`;
+            const reportText = generateSummaryText(results);
+            const signature = getSignatureAsText();
+            
+            // Объединяем отчет и подпись
+            const body = reportText + '\n\n' + signature;
+            
+            globalEmailData = {
+                recipients: Array.from(globalRecipients).join('; '),
+                subject: subject,
+                body: body
+            };
+            
+            return globalEmailData;
+        }
+
+        // Функция обновления полей формы письма
+        function updateEmailForm(emailData) {
+            document.getElementById('emailRecipients').value = emailData.recipients || 'Получатели не найдены';
+            document.getElementById('emailSubject').value = emailData.subject || '';
+            document.getElementById('emailBody').value = emailData.body || '';
+            
+            // Активируем кнопку отправки если есть данные
+            const sendButton = document.getElementById('sendEmailButton');
+            if (emailData.recipients && emailData.subject && emailData.body) {
+                sendButton.disabled = false;
+            } else {
+                sendButton.disabled = true;
+            }
+        }
+
+        // Функция открытия почтового клиента
+        function openEmailClient() {
+            if (!globalEmailData) {
+                alertManager.error('Ошибка', 'Данные письма не готовы');
+                return;
+            }
+            
+            const mailto = `mailto:${encodeURIComponent(globalEmailData.recipients)}?subject=${encodeURIComponent(globalEmailData.subject)}&body=${encodeURIComponent(globalEmailData.body)}`;
+            
+            try {
+                window.location.href = mailto;
+            } catch (error) {
+                alertManager.error('Ошибка', 'Не удалось открыть почтовый клиент', error.message);
+            }
+        }
+
+        document.getElementById('msgFiles').addEventListener('change', async function(e) {
+            const files = Array.from(e.target.files);
+            const reportsDiv = document.getElementById('reports');
+            
+            reportsDiv.innerHTML = '';
+            
+            // ПЕРВЫМ ДЕЛОМ показываем видео
+            loadingGifManager.show();
+            
+            // Даем браузеру время отрисовать видео перед тяжелой работой
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Проверяем количество файлов
+            if (files.length !== 9) {
+                const warningMsg = files.length < 9 
+                    ? `Загружено ${files.length} файлов из 9 ожидаемых. Недостает ${9 - files.length} файл(ов).`
+                    : `Загружено ${files.length} файлов, ожидалось 9. Обработаем первые 9 файлов.`;
+                
+                alertManager.warning('Количество файлов', warningMsg);
+            }
+            
+            // Еще немного времени на отрисовку
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            try {
+                const startTime = performance.now();
+                
+                // Извлекаем получателей из всех MSG файлов параллельно
+                console.log('Извлечение получателей из MSG файлов...');
+                const recipients = await extractRecipientsFromFiles(files.slice(0, 9));
+                console.log(`Найдено уникальных получателей: ${recipients.length}`);
+                
+                // Функция для обработки одного файла
+                async function processFile(file, index) {
+                    const fileStartTime = performance.now();
+                    
+                    try {
+                        // Извлекаем код базы из имени файла (первые 4 цифры)
+                        const dbCodeMatch = file.name.match(/^(\d{4})/);
+                        const dbCode = dbCodeMatch ? dbCodeMatch[1] : 'XXXX';
+                        
+                        const arrayBuffer = await file.arrayBuffer();
+                        const msgData = parseMSGFile(arrayBuffer);
+                        
+                        let result = {
+                            fileName: file.name,
+                            dbCode: dbCode,
+                            fileSize: file.size,
+                            processTime: 0,
+                            status: 'error',
+                            excelFound: false,
+                            expectedErrors: 0,
+                            foundErrors: 0,
+                            errorRows: [],
+                            rawData: null,
+                            error: null
+                        };
+                        
+                        if (msgData.attachments && msgData.attachments.length > 0) {
+                            result.excelFound = true;
+                            
+                            for (let idx = 0; idx < msgData.attachments.length; idx++) {
+                                const attachment = msgData.attachments[idx];
+                                
+                                try {
+                                    const workbook = XLSX.read(attachment.content, {
+                                        type: 'array',
+                                        bookVBA: false,
+                                        bookProps: false,
+                                        cellStyles: false,
+                                        cellDates: false
+                                    });
+                                    
+                                    const sheetName = workbook.SheetNames[0];
+                                    const sheet = workbook.Sheets[sheetName];
+                                    const data = XLSX.utils.sheet_to_json(sheet, {
+                                        header: 1, 
+                                        blankrows: false
+                                    });
+                                    
+                                    // Ограничиваем данные для ускорения
+                                    const limitedData = data.slice(0, Math.min(data.length, 1000));
+                                    result.rawData = limitedData;
+                                    
+                                    // Поиск заголовка ошибок
+                                    let errorsStart = -1;
+                                    let expectedErrorCount = 0;
+                                    let debugLog = [];
+                                    
+                                    for (let i = 0; i < Math.min(50, limitedData.length); i++) {
+                                        const cell = limitedData[i][0];
+                                        if (cell && typeof cell === 'string') {
+                                            const cellText = cell.trim();
+                                            const errorHeaderMatch = cellText.match(/^Ошибки\s*\((\d+)\)$/i);
+                                            if (errorHeaderMatch) {
+                                                errorsStart = i + 1;
+                                                expectedErrorCount = parseInt(errorHeaderMatch[1]);
+                                                result.expectedErrors = expectedErrorCount;
+                                                debugLog.push(`Заголовок ошибок: R${i+1}C1 = "${cellText.substring(0,10)}..."`);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (errorsStart === -1 && limitedData.length > 0) {
+                                        alertManager.warning(
+                                            'Заголовок ошибок не найден',
+                                            `В файле ${file.name} не удалось найти заголовок "Ошибки (N)" в первых 50 строках.`,
+                                            `База: ${dbCode} | Строк данных: ${limitedData.length}`
+                                        );
+                                    }
+                                    
+                                    // Парсинг ошибок
+                                    if (errorsStart > -1) {
+                                        let currentErrorSum = 0;
+                                        let errorRows = [];
+                                        let errorsWithoutText = 0;
+                                        const maxSearchRows = Math.min(errorsStart + 200, limitedData.length);
+                                        
+                                        for (let i = errorsStart; i < maxSearchRows; i++) {
+                                            if (limitedData[i] && limitedData[i].length > 7) {
+                                                const countText = limitedData[i][7];
+                                                
+                                                if (countText && !isNaN(parseInt(countText.toString()))) {
+                                                    const errorCount = parseInt(countText.toString()) || 0;
+                                                    
+                                                    if (errorCount > 0) {
+                                                        const errorText = limitedData[i][1];
+                                                        const nodeInfo = limitedData[i][5] ? limitedData[i][5].toString().trim() : '';
+                                                        
+                                                        // Проверяем, что есть либо текст ошибки, либо узел (или оба)
+                                                        const hasErrorText = errorText && errorText.toString().trim().length > 0;
+                                                        const hasNodeInfo = nodeInfo.length > 0;
+                                                        
+                                                        if (hasErrorText || hasNodeInfo) {
+                                                            currentErrorSum += errorCount;
+                                                            
+                                                            // Отслеживаем ошибки без текста
+                                                            if (!hasErrorText) {
+                                                                errorsWithoutText++;
+                                                            }
+                                                            
+                                                            // Используем текст ошибки или узел как основной текст
+                                                            const mainText = hasErrorText ? errorText.toString().trim() : `[Узел: ${nodeInfo}]`;
+                                                            
+                                                            // Сжимаем текст для отображения
+                                                            let shortText = mainText;
+                                                            if (shortText.length > 150) {
+                                                                shortText = shortText.substring(0, 150) + '...';
+                                                            }
+                                                            
+                                                            errorRows.push({
+                                                                row: i + 1,
+                                                                text: mainText,
+                                                                shortText: shortText,
+                                                                node: nodeInfo,
+                                                                count: errorCount
+                                                            });
+                                                            
+                                                            // Добавляем в лог отладки
+                                                            const errorTextLog = hasErrorText ? errorText.toString().substring(0,10) : '[нет текста]';
+                                                            debugLog.push(`Ошибка: R${i+1}C2="${errorTextLog}..." | R${i+1}C6="${nodeInfo.substring(0,10)}..." | R${i+1}C8="${errorCount}"`);
+                                                            
+                                                            if (currentErrorSum >= expectedErrorCount) {
+                                                                break;
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    const firstCell = limitedData[i][0];
+                                                    if (firstCell && firstCell.toString().toLowerCase().includes('предупреждения')) {
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
+                        // Уведомления о странностях
+                        if (errorsWithoutText > 0) {
+                            alertManager.warning(
+                                'Ошибки без текста',
+                                `В файле ${file.name} найдено ${errorsWithoutText} ошибок без текста описания.`,
+                                `База: ${dbCode} | Используются названия узлов вместо текстов ошибок`
+                            );
+                        }
+                        
+                        if (currentErrorSum !== expectedErrorCount && expectedErrorCount > 0) {
+                            alertManager.error(
+                                'Несоответствие количества ошибок',
+                                `В файле ${file.name} ожидалось ${expectedErrorCount} ошибок, найдено ${currentErrorSum}.`,
+                                `База: ${dbCode} | Возможно, некоторые ошибки не обработаны или есть дублирование`
+                            );
+                        }                                        result.foundErrors = currentErrorSum;
+                                        result.errorRows = errorRows;
+                                        result.status = 'success';
+                                        result.debugLog = debugLog;
+                                    }
+                                    
+                                    break; // Первый Excel файл достаточно
+                                } catch (excelError) {
+                                    result.error = `Excel ошибка: ${excelError.message}`;
+                                    alertManager.error(
+                                        'Ошибка чтения Excel',
+                                        `Не удалось прочитать Excel из файла ${file.name}`,
+                                        `База: ${dbCode} | ${excelError.message}`
+                                    );
+                                }
+                            }
+                        } else {
+                            result.error = 'Excel вложения не найдены в MSG файле';
+                            alertManager.error(
+                                'Excel не найден',
+                                `В файле ${file.name} не найдено Excel вложений.`,
+                                `База: ${dbCode} | Проверьте, что письмо содержит .xlsx файл`
+                            );
+                        }
+                        
+                        result.processTime = performance.now() - fileStartTime;
+                        return result;
+                        
+                    } catch (error) {
+                        const result = {
+                            fileName: file.name,
+                            dbCode: dbCodeMatch ? dbCodeMatch[1] : 'XXXX',
+                            fileSize: file.size,
+                            processTime: performance.now() - fileStartTime,
+                            status: 'error',
+                            error: error.message
+                        };
+                        
+                        // Уведомление об ошибке обработки файла
+                        alertManager.error(
+                            'Ошибка обработки файла',
+                            `Не удалось обработать файл ${file.name}`,
+                            `База: ${result.dbCode} | ${error.message}`
+                        );
+                        
+                        return result;
+                    }
+                }
+                
+                // Обрабатываем все файлы асинхронно
+                const processPromises = files.slice(0, 9).map((file, index) => processFile(file, index));
+                const results = await Promise.all(processPromises);
+                
+                const totalTime = performance.now() - startTime;
+                
+                // Формируем данные письма
+                const emailData = generateEmailData(results);
+                emailData.recipients = recipients.join('; ');
+                
+                // Обновляем форму письма
+                updateEmailForm(emailData);
+                
+                // Генерируем сводный отчет
+                generateMasterReport(results, totalTime);
+                
+                // Скрываем зону загрузки
+                hideUploadZone();
+                
+                // Скрываем гифку сразу
+                loadingGifManager.hide();
+            
+                
+            } catch (error) {
+                alertManager.error(
+                    'Критическая ошибка',
+                    'Произошла критическая ошибка при массовой обработке файлов',
+                    error.message
+                );
+                
+                reportsDiv.innerHTML = `<div class="file-block" style="border-color: #f00;">
+                    <div style="color:#f00; font-size: 18px; margin-bottom: 15px;">❌ Критическая ошибка массовой обработки</div>
+                    <div style="background: #ffe6e6; padding: 15px; border-radius: 5px;">${error.message}</div>
+                </div>`;
+                
+                // Скрываем гифку в случае ошибки
+                loadingGifManager.hide();
+            }
+        });
+        
+        // Функция генерации сводного отчета
+        function generateMasterReport(results, totalTime) {
+            const reportsDiv = document.getElementById('reports');
+            
+            // Группируем результаты по статусу
+            const successful = results.filter(r => r.status === 'success');
+            const failed = results.filter(r => r.status === 'error');
+            const totalErrors = successful.reduce((sum, r) => sum + (r.foundErrors || 0), 0);
+            
+            // Генерируем краткий отчёт
+            const summaryText = generateSummaryText(results);
+            
+            // Собираем отладочную информацию
+            const debugInfo = results
+                .filter(r => r.debugLog && r.debugLog.length > 0)
+                .map(r => `\n=== База ${r.dbCode} (${r.fileName}) ===\n${r.debugLog.join('\n')}`)
+                .join('\n');
+            
+            // Генерируем сводку
+            let masterReport = `
+                <div class="file-block" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 20px; padding: 20px;">
+                    <h2 style="color: white; margin: 0 0 15px 0; text-align: center; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 10px; font-size: 18px;">
+                        📊 СВОДНЫЙ ОТЧЕТ ПО БАЗАМ ДАННЫХ
+                    </h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: bold;">${results.length}</div>
+                            <div style="font-size: 13px; opacity: 0.9;">Обработано файлов</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: bold; color: #4ade80;">${successful.length}</div>
+                            <div style="font-size: 13px; opacity: 0.9;">Успешно</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: bold; color: #f87171;">${failed.length}</div>
+                            <div style="font-size: 13px; opacity: 0.9;">Ошибок</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: bold;">${(totalTime / 1000).toFixed(1)}с</div>
+                            <div style="font-size: 13px; opacity: 0.9;">Время обработки</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Генерируем отчеты по каждой базе
+            successful.forEach((result, index) => {
+                const category = categorizeErrors(result.errorRows);
+                const categoryInfo = getCategoryInfo(category);
+                
+                // Определяем цвет счётчика ошибок
+                const isErrorCountCorrect = result.foundErrors === result.expectedErrors;
+                const errorCountColor = isErrorCountCorrect ? '#10b981' : '#ef4444'; // Зелёный или красный
+                const errorCountSize = isErrorCountCorrect ? '16px' : '14px';
+                const errorCountShadow = isErrorCountCorrect ? 'box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);' : 'box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);';
+                
+                let errorsTable = '';
+                if (result.errorRows && result.errorRows.length > 0) {
+                    errorsTable = `
+                        <table class="error-table">
+                            <thead>
+                                <tr>
+                                    <th>Текст ошибки</th>
+                                    <th>Узел</th>
+                                    <th>Количество</th>
+                                    <th>Категория</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    result.errorRows.forEach(err => {
+                        const errorCategory = (err.node && (err.node.includes('Фоновое задание. Ошибка выполнения') || err.node.includes('Обмен.'))) ? 'ignore' : 'alerts';
+                        const errorCategoryInfo = getCategoryInfo(errorCategory);
+                        
+                        errorsTable += `
+                            <tr>
+                                <td class="error-text">${err.text || 'Не указано'}</td>
+                                <td class="node-info">${err.node || 'Не указано'}</td>
+                                <td class="count-cell">${err.count}</td>
+                                <td><span class="category-indicator category-${errorCategory}">${errorCategoryInfo.label}</span></td>
+                            </tr>
+                        `;
+                    });
+                    
+                    errorsTable += `
+                            </tbody>
+                        </table>
+                    `;
+                }
+                
+                masterReport += `
+                    <div class="file-block" style="margin-bottom: 25px; border-left: 5px solid ${getDbColor(result.dbCode)};">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0; color: ${getDbColor(result.dbCode)};">
+                                🏢 База данных ${result.dbCode}
+                            </h3>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="background: ${errorCountColor}; color: white; padding: 6px 16px; border-radius: 25px; font-size: ${errorCountSize}; font-weight: bold; ${errorCountShadow}">
+                                    ${result.foundErrors}/${result.expectedErrors} ошибок
+                                </span>
+                                <span class="category-indicator category-${category}">${categoryInfo.label}</span>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; font-size: 14px;">
+                            <div><strong>Файл:</strong> ${result.fileName}</div>
+                            <div><strong>Время:</strong> ${result.processTime.toFixed(1)}ms</div>
+                            <div><strong>Статус:</strong> <span style="color: #10b981;">✅ Успешно</span></div>
+                        </div>
+                        
+                        ${result.errorRows && result.errorRows.length > 0 ? `
+                            <div style="background: #2a1a1a; border: 1px solid #5a2a2a; border-radius: 8px; padding: 15px;">
+                                <h4 style="margin: 0 0 15px 0; color: #ff6b6b;">🚨 Обнаруженные ошибки (${categoryInfo.label}):</h4>
+                                ${errorsTable}
+                            </div>
+                        ` : `
+                            <div style="background: #1a2a1a; border: 1px solid #2a5a2a; border-radius: 8px; padding: 15px; color: #51cf66; text-align: center;">
+                                ✅ Ошибки не обнаружены
+                            </div>
+                        `}
+                    </div>
+                `;
+            });
+            
+            // Добавляем отчеты по неудачным файлам
+            if (failed.length > 0) {
+                masterReport += `<div class="file-block" style="border-left: 5px solid #ef4444; background: #2a1a1a;">
+                    <h3 style="color: #ff6b6b; margin-bottom: 15px;">❌ Файлы с ошибками обработки:</h3>`;
+                
+                failed.forEach(result => {
+                    masterReport += `
+                        <div style="background: #3a1a1a; padding: 15px; margin: 10px 0; border-radius: 5px; border: 1px solid #5a2a2a;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <strong style="color: #e5e5e5;">${result.fileName}</strong>
+                                <span style="background: #dc2626; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px;">
+                                    База: ${result.dbCode}
+                                </span>
+                            </div>
+                            <div style="color: #ff6b6b; font-size: 14px; margin-bottom: 8px;">
+                                <strong>Ошибка:</strong> ${result.error}
+                            </div>
+                            <div style="font-size: 12px; color: #c0c0c0;">
+                                <strong>Размер файла:</strong> ${(result.fileSize/1024).toFixed(1)} KB • 
+                                <strong>Время обработки:</strong> ${result.processTime.toFixed(1)}ms
+                            </div>
+                            ${result.error.includes('Excel вложения не найдены') ? `
+                                <div style="background: #2a2a1a; border: 1px solid #4a4a2a; border-radius: 4px; padding: 10px; margin-top: 10px; font-size: 12px; color: #e5e5e5;">
+                                    <strong>💡 Возможные решения:</strong><br>
+                                    • Убедитесь что письмо содержит Excel вложение (.xlsx)<br>
+                                    • Проверьте что файл не поврежден<br>
+                                    • Попробуйте пересохранить письмо из Outlook<br>
+                                    • Файлы .xls (старый формат) не поддерживаются
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                masterReport += `</div>`;
+            }
+            
+            reportsDiv.innerHTML = masterReport;
+            
+            // Выводим отладочную информацию в консоль после генерации отчёта
+            if (debugInfo.trim().length > 0) {
+                console.log('\n🔍 ОТЛАДОЧНАЯ ИНФОРМАЦИЯ - НАЙДЕННЫЕ ЯЧЕЙКИ:');
+                console.log(debugInfo);
+            }
+        }
+        
+        // Функция для получения информации о категории
+        function getCategoryInfo(category) {
+            const categoryMap = {
+                'clean': { label: 'Без ошибок', color: '#16a34a' },
+                'ignore': { label: 'Игнорировать', color: '#d97706' },
+                'alerts': { label: 'Алерты', color: '#dc2626' }
+            };
+            return categoryMap[category] || { label: 'Неизвестно', color: '#6b7280' };
+        }
+        
+        // Функция для получения цвета базы данных
+        function getDbColor(dbCode) {
+            const colors = {
+                '5011': '#3b82f6', // Синий
+                '5015': '#10b981', // Зеленый
+                '5001': '#f59e0b', // Желтый
+                '5005': '#ef4444', // Красный
+                '5010': '#8b5cf6', // Фиолетовый
+                '5020': '#06b6d4', // Голубой
+                '5025': '#84cc16', // Лайм
+                '5030': '#f97316', // Оранжевый
+                '5035': '#ec4899'  // Розовый
+            };
+            return colors[dbCode] || '#6b7280'; // Серый по умолчанию
+        }
+
+        // Поддержка drag & drop
+        const dropZone = document.getElementById('dropZone');
+        const msgFiles = document.getElementById('msgFiles');
+        
+        // Улучшенная поддержка drag & drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        
+        dropZone.addEventListener('dragleave', (e) => {
+            // Проверяем, что мышь действительно покинула зону
+            if (!dropZone.contains(e.relatedTarget)) {
+                dropZone.classList.remove('drag-over');
+            }
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            const files = Array.from(e.dataTransfer.files);
+            const msgFiles = files.filter(file => file.name.toLowerCase().endsWith('.msg'));
+            
+            if (msgFiles.length > 0) {
+                // Создаем новый FileList объект
+                const dt = new DataTransfer();
+                msgFiles.forEach(file => dt.items.add(file));
+                document.getElementById('msgFiles').files = dt.files;
+                document.getElementById('msgFiles').dispatchEvent(new Event('change'));
+            } else {
+                alertManager.warning(
+                    'Неподходящие файлы',
+                    'Пожалуйста, перетащите только MSG файлы.',
+                    `Обнаружено файлов: ${files.length}, MSG файлов: ${msgFiles.length}`
+                );
+            }
+        });
+        
+        // Функция для скрытия зоны загрузки после обработки
+        function hideUploadZone() {
+            const uploadPanel = document.getElementById('uploadPanel');
+            const mainContent = document.getElementById('mainContent');
+            
+            // Полностью убираем панель загрузки из DOM
+            uploadPanel.remove();
+            
+            // Переключаем режим контейнера
+            mainContent.classList.remove('upload-mode');
+            mainContent.classList.add('report-mode');
+        }
+    </script>
+</body>
+</html>
