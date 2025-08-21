@@ -159,39 +159,75 @@
                 const randomIndex = Math.floor(Math.random() * this.gifs.length);
                 const selectedVideo = this.gifs[randomIndex];
                 
-                // Простое создание видео без лишних атрибутов
-                const videoHTML = `
-                    <video class="loading-gif" autoplay loop muted playsinline 
-                           style="max-width:300px;height:auto;display:block;margin:20px auto;border-radius:8px;">
-                        <source src="${selectedVideo}" type="video/webm">
-                        <div style="text-align:center;color:#999;padding:20px;">⚡ Загрузка...</div>
-                    </video>
-                `;
+                // Создаем видео элемент напрямую через JavaScript
+                const video = document.createElement('video');
+                video.className = 'loading-gif';
+                video.autoplay = true;
+                video.loop = true;
+                video.muted = true;
+                video.playsInline = true;
+                video.style.cssText = 'max-width:300px;height:auto;display:block;margin:20px auto;border-radius:8px;';
                 
-                this.loadingElement.innerHTML = videoHTML;
+                // Устанавливаем источник
+                video.src = selectedVideo;
+                
+                // Очищаем контейнер и добавляем видео
+                this.loadingElement.innerHTML = '';
+                this.loadingElement.appendChild(video);
                 this.loadingElement.style.display = 'block';
                 
-                // Принудительный запуск видео
-                const video = this.loadingElement.querySelector('video');
-                if (video) {
-                    // Обработка загрузки
-                    video.addEventListener('loadeddata', () => {
-                        video.play().catch(e => console.log('Autoplay blocked:', e));
-                    });
-                    
-                    // Fallback через таймер
-                    setTimeout(() => {
-                        if (video.paused) {
-                            video.play().catch(() => {});
-                        }
-                    }, 100);
-                    
-                    // Обработка ошибок
-                    video.addEventListener('error', () => {
-                        console.log('Video error for:', selectedVideo);
+                // Агрессивные попытки запуска
+                const startVideo = () => {
+                    if (video.readyState >= 3) { // HAVE_FUTURE_DATA
+                        video.play().catch(e => {
+                            console.log('Autoplay blocked, trying manual start:', e);
+                            // Fallback - показываем текст загрузки
+                            this.loadingElement.innerHTML = `
+                                <div style="text-align:center;color:#4c6ef5;font-size:18px;font-weight:bold;padding:20px;">
+                                    ⚡ Обработка файлов...
+                                </div>
+                            `;
+                        });
+                    }
+                };
+                
+                // Множественные обработчики событий
+                video.addEventListener('canplay', startVideo, { once: true });
+                video.addEventListener('loadeddata', startVideo, { once: true });
+                video.addEventListener('loadedmetadata', startVideo, { once: true });
+                
+                // Принудительные попытки через интервалы
+                setTimeout(() => {
+                    if (video.paused) {
+                        video.play().catch(() => {});
+                    }
+                }, 50);
+                
+                setTimeout(() => {
+                    if (video.paused) {
+                        video.play().catch(() => {});
+                    }
+                }, 200);
+                
+                setTimeout(() => {
+                    if (video.paused) {
+                        video.play().catch(() => {});
+                    }
+                }, 500);
+                
+                // Обработка ошибок
+                video.addEventListener('error', () => {
+                    console.log('Video loading error for:', selectedVideo);
+                    this.onError();
+                }, { once: true });
+                
+                // Финальный fallback через 1 секунду
+                setTimeout(() => {
+                    if (video.paused || video.readyState === 0) {
+                        console.log('Video failed to start, showing text fallback');
                         this.onError();
-                    });
-                }
+                    }
+                }, 1000);
             }
             
             // Скрыть видео
@@ -211,9 +247,15 @@
                     return;
                 }
                 
+                console.log('LoadingGifManager: Switching to text fallback due to video error');
+                
                 this.loadingElement.innerHTML = `
-                    <div style="color: #4c6ef5; font-size: 18px; font-weight: bold; text-align: center;">
+                    <div style="color: #4c6ef5; font-size: 18px; font-weight: bold; text-align: center; padding: 20px;">
                         ⚡ Обработка файлов...
+                        <br>
+                        <div style="font-size: 12px; color: #888; margin-top: 10px;">
+                            (Анимация недоступна)
+                        </div>
                     </div>
                 `;
             }
