@@ -125,112 +125,39 @@
         // Создаем глобальный экземпляр менеджера алертов
         const alertManager = new AlertManager();
         
-        // Система случайных гифок для загрузки (ПРОСТОЙ подход как в тесте)
-        class LoadingGifManager {
+        // Простая система анимации загрузки
+        class LoadingManager {
             constructor() {
-                // Набор WebM файлов (как в тестовом файле)
-                this.gifs = [
-                    'webm/aesthetic_possum_by_fstikbot_agadywoaajwomug_AgADYWoAAjwomUg.webm',
-                    'webm/kitties4bynorufx_by_fstikbot_agad2bsaapplaus_AgAD2BsAApPLAUs.webm',
-                    'webm/kitties4bynorufx_by_fstikbot_agadzrwaanlkaafl_AgADzRwAAnLkAAFL.webm',
-                    'webm/sadcattwitch_by_fstikbot_agadq2gaagdgsug_AgADq2gAAgdGSUg.webm',
-                    'webm/tinycatss_agad03maanpukek_AgAD03MAAnpuKEk.webm',
-                    'webm/tinycatss_agadg2kaarzfseg_AgADg2kAArZFsEg.webm',
-                    'webm/vikostvspack_agad2zsaamelaafk_AgAD2zsAAmeLAAFK.webm',
-                    'webm/vikostvspack_agad6d4aatdsweo_AgAD6D4AAtdsWEo.webm',
-                    'webm/vikostvspack_agadfgcaapzjues_AgADfGcAApzJUEs.webm',
-                    'webm/vikostvspack_agadndwaavuqieo_AgADNDwAAvuqIEo.webm',
-                    'webm/vikostvspack_agadxweaamgokeg_AgADXWEAAmGoKEg.webm',
-                    'webm/whitehamsterwow_agadbn8aajrngus_AgADBn8AAjRNGUs.webm'
-                ];
-                
                 this.loadingElement = document.getElementById('loading');
                 this.isShowing = false;
             }
             
-            // Показать случайное видео
+            // Показать анимацию загрузки
             show() {
                 if (this.isShowing) {
                     return;
                 }
                 this.isShowing = true;
                 
-                // Выбираем случайное видео
-                const randomIndex = Math.floor(Math.random() * this.gifs.length);
-                const selectedVideo = this.gifs[randomIndex];
-                
-                // Создаем видео элемент напрямую через JavaScript
-                const video = document.createElement('video');
-                video.className = 'loading-gif';
-                video.autoplay = true;
-                video.loop = true;
-                video.muted = true;
-                video.playsInline = true;
-                video.style.cssText = 'max-width:300px;height:auto;display:block;margin:20px auto;border-radius:8px;';
-                
-                // Устанавливаем источник
-                video.src = selectedVideo;
-                
-                // Очищаем контейнер и добавляем видео
-                this.loadingElement.innerHTML = '';
-                this.loadingElement.appendChild(video);
-                this.loadingElement.style.display = 'block';
-                
-                // Агрессивные попытки запуска
-                const startVideo = () => {
-                    if (video.readyState >= 3) { // HAVE_FUTURE_DATA
-                        video.play().catch(e => {
-                            console.log('Autoplay blocked, trying manual start:', e);
-                            // Fallback - показываем текст загрузки
-                            this.loadingElement.innerHTML = `
-                                <div style="text-align:center;color:#4c6ef5;font-size:18px;font-weight:bold;padding:20px;">
-                                    ⚡ Обработка файлов...
+                this.loadingElement.innerHTML = `
+                    <div class="loading-content">
+                        <div class="overlay-loader">
+                                <div class="loader">
+                                    <div></div>
+                                    <div></div>
+                                    <div></div>
+                                    <div></div>
+                                    <div></div>
+                                    <div></div>
+                                    <div></div>
                                 </div>
-                            `;
-                        });
-                    }
-                };
-                
-                // Множественные обработчики событий
-                video.addEventListener('canplay', startVideo, { once: true });
-                video.addEventListener('loadeddata', startVideo, { once: true });
-                video.addEventListener('loadedmetadata', startVideo, { once: true });
-                
-                // Принудительные попытки через интервалы
-                setTimeout(() => {
-                    if (video.paused) {
-                        video.play().catch(() => {});
-                    }
-                }, 50);
-                
-                setTimeout(() => {
-                    if (video.paused) {
-                        video.play().catch(() => {});
-                    }
-                }, 200);
-                
-                setTimeout(() => {
-                    if (video.paused) {
-                        video.play().catch(() => {});
-                    }
-                }, 500);
-                
-                // Обработка ошибок
-                video.addEventListener('error', () => {
-                    console.log('Video loading error for:', selectedVideo);
-                    this.onError();
-                }, { once: true });
-                
-                // Финальный fallback через 1 секунду
-                setTimeout(() => {
-                    if (video.paused || video.readyState === 0) {
-                        console.log('Video failed to start, showing text fallback');
-                        this.onError();
-                    }
-                }, 1000);
+                            </div>
+                    </div>
+                `;
+                this.loadingElement.style.display = 'block';
             }
             
-            // Скрыть видео
+            // Скрыть анимацию
             hide() {
                 if (!this.isShowing) {
                     return;
@@ -240,29 +167,10 @@
                 this.loadingElement.style.display = 'none';
                 this.loadingElement.innerHTML = '';
             }
-            
-            // Fallback при ошибке
-            onError() {
-                if (!this.isShowing) {
-                    return;
-                }
-                
-                console.log('LoadingGifManager: Switching to text fallback due to video error');
-                
-                this.loadingElement.innerHTML = `
-                    <div style="color: #4c6ef5; font-size: 18px; font-weight: bold; text-align: center; padding: 20px;">
-                        ⚡ Обработка файлов...
-                        <br>
-                        <div style="font-size: 12px; color: #888; margin-top: 10px;">
-                            (Анимация недоступна)
-                        </div>
-                    </div>
-                `;
-            }
         }
         
-        // Создаем глобальный экземпляр менеджера гифок
-        const loadingGifManager = new LoadingGifManager();
+        // Создаем глобальный экземпляр менеджера загрузки
+        const loadingManager = new LoadingManager();
 
         // Инициализация формы письма при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
@@ -671,8 +579,8 @@
             
             reportsDiv.innerHTML = '';
             
-            // ПЕРВЫМ ДЕЛОМ показываем видео
-            loadingGifManager.show();
+            // ПЕРВЫМ ДЕЛОМ показываем анимацию загрузки
+            loadingManager.show();
             
             // Даем браузеру время отрисовать видео перед тяжелой работой
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -925,8 +833,8 @@
                 // Скрываем зону загрузки
                 hideUploadZone();
                 
-                // Скрываем гифку сразу
-                loadingGifManager.hide();
+                // Скрываем анимацию сразу
+                loadingManager.hide();
             
                 
             } catch (error) {
@@ -941,8 +849,8 @@
                     <div style="background: #ffe6e6; padding: 15px; border-radius: 5px;">${error.message}</div>
                 </div>`;
                 
-                // Скрываем гифку в случае ошибки
-                loadingGifManager.hide();
+                // Скрываем анимацию в случае ошибки
+                loadingManager.hide();
             }
         });
         
