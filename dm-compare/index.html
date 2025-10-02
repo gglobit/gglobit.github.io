@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сравнение датаматрикс кодов</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Сравнение датаматрикс кодов</h1>
+            <p class="subtitle">Найдите недостающие и лишние ДМ коды в ваших наборах</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <div class="input-group">
+                    <h2>Набор A (эталонный)</h2>
+                    <textarea 
+                        id="dataset-a" 
+                        placeholder="Вставьте или введите датаматрикс коды (по одному на строку)&#10;Пример:&#10;0105900516693121215l&#13;&#10;0105900516693121215L&#13;&#10;..."
+                        class="dataset-input"
+                        rows="10"
+                    ></textarea>
+                    <div class="input-options">
+                        <label>
+                            <input type="file" id="file-a" accept=".txt,.csv" class="file-input">
+                            <span class="file-button">📁 Загрузить файл</span>
+                        </label>
+                        <span class="count" id="count-a">Кодов: 0</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <h2>Набор B (проверяемый)</h2>
+                    <textarea 
+                        id="dataset-b" 
+                        placeholder="Вставьте или введите датаматрикс коды для сравнения&#10;Пример:&#10;0105900516693121215l&#13;&#10;0105900516693121215L&#13;&#10;..."
+                        class="dataset-input"
+                        rows="10"
+                    ></textarea>
+                    <div class="input-options">
+                        <label>
+                            <input type="file" id="file-b" accept=".txt,.csv" class="file-input">
+                            <span class="file-button">📁 Загрузить файл</span>
+                        </label>
+                        <span class="count" id="count-b">Кодов: 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="compare-btn" class="compare-button" disabled>
+                    🔍 Сравнить наборы
+                </button>
+                <div class="options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="ignore-case" checked>
+                        <span class="checkmark"></span>
+                        Игнорировать регистр
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="normalize-spaces" checked>
+                        <span class="checkmark"></span>
+                        Нормализовать пробелы
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="remove-special" checked>
+                        <span class="checkmark"></span>
+                        Удалить спец. символы
+                    </label>
+                </div>
+            </div>
+
+            <div id="results" class="results hidden">
+                <div class="results-header">
+                    <h2>Результаты сравнения</h2>
+                    <div class="export-buttons">
+                        <button id="export-txt" class="export-btn">📄 Экспорт TXT</button>
+                        <button id="export-csv" class="export-btn">📊 Экспорт CSV</button>
+                    </div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Общих кодов:</span>
+                        <span id="common-count" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Только в A:</span>
+                        <span id="only-a-count" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Только в B:</span>
+                        <span id="only-b-count" class="stat-value">0</span>
+                    </div>
+                </div>
+
+                <div class="results-grid">
+                    <div class="result-column">
+                        <h3 class="column-title missing">❌ Недостающие в B (есть в A)</h3>
+                        <div id="missing-codes" class="code-list"></div>
+                    </div>
+                    
+                    <div class="result-column">
+                        <h3 class="column-title extra">➕ Лишние в B (нет в A)</h3>
+                        <div id="extra-codes" class="code-list"></div>
+                    </div>
+                    
+                    <div class="result-column">
+                        <h3 class="column-title common">✅ Общие коды</h3>
+                        <div id="common-codes" class="code-list"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>© 2025 Инструмент для сравнения датаматрикс кодов</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
