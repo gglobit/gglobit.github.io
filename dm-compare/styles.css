@@ -7,9 +7,9 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     min-height: 100vh;
-    color: #333;
+    color: #e8e8e8;
     line-height: 1.6;
 }
 
@@ -41,11 +41,12 @@ header h1 {
 
 /* Основной контент */
 main {
-    background: white;
+    background: #2d2d44;
     border-radius: 20px;
     padding: 30px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
     margin-bottom: 30px;
+    border: 1px solid #3d3d5a;
 }
 
 /* Секция ввода */
@@ -57,21 +58,21 @@ main {
 }
 
 .input-group {
-    background: #f8f9fa;
+    background: #383854;
     border-radius: 15px;
     padding: 25px;
-    border: 2px solid #e9ecef;
+    border: 2px solid #4a4a6a;
     transition: all 0.3s ease;
 }
 
 .input-group:hover {
     border-color: #667eea;
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.2);
 }
 
 .input-group h2 {
-    color: #495057;
+    color: #e8e8e8;
     margin-bottom: 15px;
     font-size: 1.4rem;
     font-weight: 600;
@@ -80,23 +81,24 @@ main {
 .dataset-input {
     width: 100%;
     padding: 15px;
-    border: 2px solid #e9ecef;
+    border: 2px solid #4a4a6a;
     border-radius: 10px;
     font-family: 'Courier New', monospace;
     font-size: 14px;
     resize: vertical;
     transition: border-color 0.3s ease;
-    background: white;
+    background: #2d2d44;
+    color: #e8e8e8;
 }
 
 .dataset-input:focus {
     outline: none;
     border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
 }
 
 .dataset-input::placeholder {
-    color: #6c757d;
+    color: #a8a8a8;
     opacity: 0.8;
 }
 
@@ -129,12 +131,12 @@ main {
 }
 
 .count {
-    color: #6c757d;
+    color: #e8e8e8;
     font-weight: 500;
     padding: 8px 12px;
-    background: white;
+    background: #2d2d44;
     border-radius: 6px;
-    border: 1px solid #e9ecef;
+    border: 1px solid #4a4a6a;
 }
 
 /* Элементы управления */
@@ -142,8 +144,9 @@ main {
     text-align: center;
     margin-bottom: 30px;
     padding: 25px;
-    background: #f8f9fa;
+    background: #383854;
     border-radius: 15px;
+    border: 1px solid #4a4a6a;
 }
 
 .compare-button {
@@ -184,7 +187,7 @@ main {
     align-items: center;
     cursor: pointer;
     font-weight: 500;
-    color: #495057;
+    color: #e8e8e8;
     position: relative;
     padding-left: 30px;
 }
@@ -202,8 +205,8 @@ main {
     transform: translateY(-50%);
     height: 20px;
     width: 20px;
-    background-color: white;
-    border: 2px solid #e9ecef;
+    background-color: #2d2d44;
+    border: 2px solid #4a4a6a;
     border-radius: 4px;
     transition: all 0.3s ease;
 }
@@ -249,11 +252,11 @@ main {
     align-items: center;
     margin-bottom: 25px;
     padding-bottom: 15px;
-    border-bottom: 2px solid #e9ecef;
+    border-bottom: 2px solid #4a4a6a;
 }
 
 .results-header h2 {
-    color: #495057;
+    color: #e8e8e8;
     font-size: 1.8rem;
 }
 
@@ -265,7 +268,7 @@ main {
 .export-btn {
     padding: 10px 20px;
     border: 2px solid #667eea;
-    background: white;
+    background: #2d2d44;
     color: #667eea;
     border-radius: 8px;
     cursor: pointer;
@@ -288,16 +291,16 @@ main {
 }
 
 .stat-item {
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    background: linear-gradient(135deg, #383854, #2d2d44);
     padding: 20px;
     border-radius: 12px;
     text-align: center;
-    border: 1px solid #e9ecef;
+    border: 1px solid #4a4a6a;
 }
 
 .stat-label {
     display: block;
-    color: #6c757d;
+    color: #a8a8a8;
     font-weight: 500;
     margin-bottom: 8px;
 }
@@ -306,7 +309,7 @@ main {
     display: block;
     font-size: 2rem;
     font-weight: 700;
-    color: #495057;
+    color: #e8e8e8;
 }
 
 /* Сетка результатов */
@@ -317,10 +320,10 @@ main {
 }
 
 .result-column {
-    background: #f8f9fa;
+    background: #383854;
     border-radius: 15px;
     overflow: hidden;
-    border: 2px solid #e9ecef;
+    border: 2px solid #4a4a6a;
 }
 
 .column-title {
@@ -333,40 +336,44 @@ main {
 }
 
 .column-title.missing {
-    background: linear-gradient(135deg, #dc3545, #c82333);
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
 }
 
 .column-title.extra {
-    background: linear-gradient(135deg, #fd7e14, #e55a00);
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
 }
 
 .column-title.common {
-    background: linear-gradient(135deg, #28a745, #1e7e34);
+    background: linear-gradient(135deg, #27ae60, #229954);
+    color: white;
 }
 
 .code-list {
     max-height: 400px;
     overflow-y: auto;
     padding: 20px;
-    background: white;
+    background: #2d2d44;
 }
 
 .code-item {
     padding: 12px 15px;
     margin-bottom: 8px;
-    background: #f8f9fa;
+    background: #383854;
     border-radius: 8px;
     font-family: 'Courier New', monospace;
     font-size: 13px;
-    border-left: 4px solid #e9ecef;
+    border-left: 4px solid #667eea;
     word-break: break-all;
     transition: all 0.2s ease;
     white-space: pre-wrap;
     line-height: 1.4;
+    color: #f8f9fa;
 }
 
 .code-item:hover {
-    background: #e9ecef;
+    background: #4a4a6a;
     transform: translateX(5px);
     cursor: pointer;
 }
@@ -376,13 +383,31 @@ main {
 }
 
 /* Стили для различных типов кодов */
-.code-item.different-formats {
-    border-left-color: #ffc107;
-    background: #fff8e1;
+#missing-codes .code-item {
+    border-left-color: #e74c3c;
+    background: #462d32;
 }
 
-.code-item.different-formats:hover {
-    background: #ffecb3;
+#missing-codes .code-item:hover {
+    background: #5a3742;
+}
+
+#extra-codes .code-item {
+    border-left-color: #f39c12;
+    background: #463a2d;
+}
+
+#extra-codes .code-item:hover {
+    background: #5a4a37;
+}
+
+#common-codes .code-item {
+    border-left-color: #27ae60;
+    background: #2d462f;
+}
+
+#common-codes .code-item:hover {
+    background: #375a3a;
 }
 
 /* Пустые списки */
@@ -390,7 +415,7 @@ main {
     content: "Коды не найдены";
     display: block;
     text-align: center;
-    color: #6c757d;
+    color: #a8a8a8;
     font-style: italic;
     padding: 40px 20px;
 }
@@ -409,17 +434,17 @@ footer {
 }
 
 .code-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: #2d2d44;
     border-radius: 4px;
 }
 
 .code-list::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
+    background: #4a4a6a;
     border-radius: 4px;
 }
 
 .code-list::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+    background: #667eea;
 }
 
 /* Адаптивность */
