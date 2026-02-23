@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Order Items</title>
+<style>
+  :root {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #1e1e1e;
+    --bg-card: #252525;
+    --bg-card-hover: #2d2d2d;
+    --bg-input: #2a2a2a;
+    --border-color: #353535;
+    --border-hover: rgba(77, 171, 247, 0.4);
+    --text-primary: #e0e0e0;
+    --text-secondary: #888;
+    --text-muted: #666;
+    --accent-blue: #4dabf7;
+    --accent-blue-dark: #339af0;
+    --accent-green: #51cf66;
+    --accent-red: #ff6b6b;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --gradient-blue: linear-gradient(135deg, #4dabf7, #339af0);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #search, .actions, #info, #error-banner, .table-container {
+    width: 100%;
+    max-width: 600px;
+  }
+
+  /* Search */
+  #search {
+    width: 100%;
+    max-width: 360px;
+    padding: 12px 14px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    margin-bottom: 16px;
+  }
+  #search:hover { border-color: rgba(77, 171, 247, 0.3); }
+  #search:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.15);
+    background: var(--bg-card);
+  }
+  #search::placeholder { color: var(--text-muted); }
+
+  /* Actions */
+  .actions { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+
+  button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.15s ease;
+    background: var(--gradient-blue);
+    color: white;
+  }
+  button:hover {
+    opacity: 0.85;
+  }
+  button:active { opacity: 0.7; }
+
+  .btn-clear {
+    background: linear-gradient(135deg, #e03131, #c92a2a) !important;
+  }
+  .btn-secondary {
+    background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+  }
+
+  .hint { font-size: 12px; color: var(--text-muted); font-style: italic; }
+
+  /* Info bar */
+  #info { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
+  .mismatch-info { color: var(--accent-red); font-weight: 600; margin-left: 12px; }
+
+  /* Table */
+  .table-container {
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+  }
+
+  table { width: 100%; border-collapse: collapse; background: var(--bg-card); }
+
+  th {
+    background: linear-gradient(135deg, #2a2a2a, #222);
+    color: var(--accent-blue);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 2px solid var(--accent-blue);
+    text-align: center;
+  }
+
+  td {
+    padding: 10px 16px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 13px;
+    transition: background 0.15s ease;
+  }
+
+  td:first-child {
+    font-weight: 600;
+    color: #fff;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+  }
+
+  tbody tr { background: var(--bg-card); }
+  tbody tr:nth-child(even) { background: #282828; }
+  tbody tr:hover { background: #333; }
+
+  /* Mismatch row */
+  .mismatch td { background: rgba(255, 107, 107, 0.1) !important; }
+  .mismatch:hover td { background: rgba(255, 107, 107, 0.18) !important; }
+
+  /* Missing in clipboard */
+  .missing td { opacity: 0.3; }
+  .missing:hover td { opacity: 0.5; background: var(--bg-card-hover); }
+
+  /* Error banner */
+  .error-banner {
+    padding: 10px 14px;
+    background: rgba(255, 107, 107, 0.12);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    border-radius: 8px;
+    color: var(--accent-red);
+    font-size: 13px;
+    margin-bottom: 12px;
+    display: none;
+    border-left: 3px solid var(--accent-red);
+  }
+  .error-banner span { font-weight: 600; }
+
+  /* Badge */
+  .badge {
+    display: inline-block;
+    padding: 3px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .badge-yes {
+    background: rgba(81, 207, 102, 0.15);
+    color: var(--accent-green);
+    border: 1px solid rgba(81, 207, 102, 0.3);
+  }
+  .badge-no {
+    background: rgba(255, 107, 107, 0.1);
+    color: var(--accent-red);
+    border: 1px solid rgba(255, 107, 107, 0.25);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb { background: #404040; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent-blue); }
+
+  /* Empty state */
+  .empty-state {
+    width: 100%;
+    max-width: 600px;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .empty-state h2 {
+    color: var(--text-secondary);
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  .empty-state p {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+  .cmd-box {
+    position: relative;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: left;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    color: var(--accent-green);
+    word-break: break-all;
+    white-space: pre-wrap;
+    line-height: 1.5;
+    max-height: 200px;
+    overflow-y: auto;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .cmd-box:hover { border-color: var(--accent-blue); }
+  .cmd-box .copy-hint {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    pointer-events: none;
+    transition: color 0.2s;
+  }
+  .cmd-box.copied .copy-hint { color: var(--accent-green); }
+</style>
+</head>
+<body>
+
+<input type="text" id="search" placeholder="Поиск по Product ID...">
+
+<div class="actions">
+  <button id="pasteBtn">📋 Вставить из буфера</button>
+  <button class="btn-secondary" id="copyBtn">🗐 Копировать</button>
+  <button class="btn-secondary" id="excelBtn">📅 Excel</button>
+  <button class="btn-clear" id="clearBtn" style="display:none">✕ Сбросить</button>
+  <span class="hint" id="pasteHint"></span>
+</div>
+
+<div id="empty-state" class="empty-state">
+  <h2>Нет данных</h2>
+  <p>Откройте страницу заказа и выполните в консоли браузера (F12):</p>
+  <div class="cmd-box" id="cmdBox" title="Нажмите, чтобы скопировать">
+    <span class="copy-hint" id="copyHintCmd">📋 Копировать</span>
+    <code id="cmdText"></code>
+  </div>
+</div>
+
+<div id="main-content" style="display:none; width:100%; display:none; flex-direction:column; align-items:center;">
+<div id="error-banner" class="error-banner"></div>
+<div id="info"></div>
+
+<div class="table-container">
+<table>
+  <thead><tr><th>Product ID</th><th>Маркировка</th></tr></thead>
+  <tbody id="tbody"></tbody>
+</table>
+</div>
+</div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+let items = [];
+let orderNumber = '';
+let clipboardMap = null; // product_id -> { is_marked: bool }
+let replacedIds = new Set(); // IDs with filled "Замена" column
+
+function render(filter) {
+  const f = (filter || '').toLowerCase();
+  const filtered = items.filter(i => i.product_id.toLowerCase().includes(f));
+
+  let mismatchCount = 0;
+  let missingCount = 0;
+
+  const rows = filtered.map(it => {
+    let cls = '';
+    if (clipboardMap) {
+      const clipVal = clipboardMap.get(it.product_id);
+      if (clipVal === undefined) {
+        // Not in clipboard — check if it was replaced
+        if (!replacedIds.has(it.product_id)) {
+          cls = 'missing';
+          missingCount++;
+        }
+      } else if (clipVal !== it.is_marked) {
+        cls = 'mismatch';
+        mismatchCount++;
+      }
+    }
+    const badge = it.is_marked
+      ? '<span class="badge badge-yes">Да</span>'
+      : '<span class="badge badge-no">Нет</span>';
+    return `<tr class="${cls}"><td>${it.product_id}</td><td>${badge}</td></tr>`;
+  }).join('');
+
+  let info = `Показано: ${filtered.length} из ${items.length}`;
+  if (clipboardMap) {
+    info += `<span class="mismatch-info">Расхождений: ${mismatchCount}</span>`;
+    if (missingCount) info += `<span style="color:var(--text-muted);margin-left:12px">Нет в буфере: ${missingCount}</span>`;
+  }
+  document.getElementById('info').innerHTML = info;
+  document.getElementById('tbody').innerHTML = rows;
+}
+
+document.getElementById('search').addEventListener('input', e => render(e.target.value));
+
+document.getElementById('pasteBtn').addEventListener('click', async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    parseClipboard(text);
+  } catch {
+    document.getElementById('pasteHint').textContent = 'Нет доступа к буферу обмена';
+  }
+});
+
+function parseClipboard(text) {
+  const lines = text.trim().split('\n').map(l => l.split('\t'));
+  let colId = 3, colMark = 5, colReplace = 2;
+  const header = lines[0];
+  if (header) {
+    header.forEach((h, i) => {
+      const hl = h.trim().toLowerCase();
+      if (hl.includes('составной код') || hl.includes('кис')) colId = i;
+      if (hl === 'маркировка' || hl.includes('маркировк')) colMark = i;
+      if (hl === 'замена' || hl.includes('замен')) colReplace = i;
+    });
+  }
+
+  clipboardMap = new Map();
+  replacedIds = new Set();
+  const siteIds = new Set(items.map(i => i.product_id));
+  const extraIds = [];
+  const errorBanner = document.getElementById('error-banner');
+
+  const dataLines = lines.slice(1);
+  for (const cols of dataLines) {
+    if (cols.length <= Math.max(colId, colMark)) continue;
+    const pid = cols[colId]?.trim();
+    const mark = cols[colMark]?.trim().toLowerCase();
+    const replacement = cols[colReplace]?.trim();
+    if (!pid) continue;
+
+    // If replacement column is filled, remember this ID as replaced
+    if (replacement) {
+      replacedIds.add(pid);
+    }
+
+    clipboardMap.set(pid, mark === 'да');
+
+    // Check for items in clipboard but not on site (excluding replacements)
+    if (!siteIds.has(pid) && !replacement) {
+      extraIds.push(pid);
+    }
+  }
+
+  // Show error for extra items
+  if (extraIds.length > 0) {
+    errorBanner.innerHTML = `<span>⚠ В буфере ${extraIds.length} товар(ов), которых нет в заказе:</span><br>${extraIds.join(', ')}`;
+    errorBanner.style.display = 'block';
+  } else {
+    errorBanner.style.display = 'none';
+  }
+
+  document.getElementById('pasteHint').textContent = `Загружено ${clipboardMap.size} позиций`;
+  document.getElementById('clearBtn').style.display = '';
+
+  // Sort: mismatches first, then missing last
+  items.sort((a, b) => {
+    const inClipA = clipboardMap.has(a.product_id) || replacedIds.has(a.product_id);
+    const inClipB = clipboardMap.has(b.product_id) || replacedIds.has(b.product_id);
+    const mismA = inClipA && clipboardMap.get(a.product_id) !== undefined && clipboardMap.get(a.product_id) !== a.is_marked ? 1 : 0;
+    const mismB = inClipB && clipboardMap.get(b.product_id) !== undefined && clipboardMap.get(b.product_id) !== b.is_marked ? 1 : 0;
+    if (mismB !== mismA) return mismB - mismA;
+    const missA = !inClipA ? 1 : 0;
+    const missB = !inClipB ? 1 : 0;
+    if (missA !== missB) return missA - missB;
+    return (b.is_marked ? 1 : 0) - (a.is_marked ? 1 : 0);
+  });
+
+  render(document.getElementById('search').value);
+}
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  clipboardMap = null;
+  replacedIds = new Set();
+  document.getElementById('pasteHint').textContent = '';
+  document.getElementById('clearBtn').style.display = 'none';
+  document.getElementById('error-banner').style.display = 'none';
+  render(document.getElementById('search').value);
+});
+
+const _b64cmd = 'ZmV0Y2goYGh0dHBzOi8vZDEuZ2xvYnVzLnJ1L2JmZi1tYW5hZ2UvYXBpL3YxL29yZGVycy9vcmRlcnMvJHtsb2NhdGlvbi5wYXRobmFtZS5zcGxpdCgnLycpLnBvcCgpfT9pbmNsdWRlPWl0ZW1zYCx7aGVhZGVyczp7YXV0aG9yaXphdGlvbjpgQmVhcmVyICR7bG9jYWxTdG9yYWdlLmdldEl0ZW0oJ2F1dGgtYWNjZXNzLXRva2VuJyl9YH19KS50aGVuKHI9PnIuanNvbigpKS50aGVuKGQ9Pntjb25zdCB3PXdpbmRvdy5vcGVuKCdodHRwczovL2dnbG9iaXQuZ2l0aHViLmlvL2lzbWFya2VkJyk7YWRkRXZlbnRMaXN0ZW5lcignbWVzc2FnZScsZT0+e2lmKGUuZGF0YT09PSdyZWFkeScpdy5wb3N0TWVzc2FnZShkLCcqJyl9KX0p';
+document.getElementById('cmdText').textContent = atob(_b64cmd);
+
+// Copy command on click
+document.getElementById('cmdBox').addEventListener('click', async () => {
+  const text = atob(_b64cmd);
+  await navigator.clipboard.writeText(text);
+  const hint = document.getElementById('copyHintCmd');
+  const box = document.getElementById('cmdBox');
+  hint.textContent = '✓ Скопировано';
+  box.classList.add('copied');
+  setTimeout(() => { hint.textContent = '📋 Копировать'; box.classList.remove('copied'); }, 2000);
+});
+
+function showMainContent() {
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('search').style.display = '';
+  document.querySelector('.actions').style.display = '';
+  const mc = document.getElementById('main-content');
+  mc.style.display = 'flex';
+}
+
+window.addEventListener('message', e => {
+  const d = e.data;
+  if (d && d.data && d.data.items) {
+    items = d.data.items.map(i => ({ product_id: i.product_id, is_marked: i.is_marked }));
+    orderNumber = d.data.number || '';
+    showMainContent();
+    render('');
+  }
+});
+if (window.opener) window.opener.postMessage('ready', '*');
+
+// Initially hide search & actions if no data
+if (!items.length) {
+  document.getElementById('search').style.display = 'none';
+  document.querySelector('.actions').style.display = 'none';
+}
+
+// Copy original table to clipboard
+document.getElementById('copyBtn').addEventListener('click', async () => {
+  const tsv = 'Product ID\tМаркировка\n' + items.map(i => `${i.product_id}\t${i.is_marked ? 'Да' : 'Нет'}`).join('\n');
+  await navigator.clipboard.writeText(tsv);
+  const hint = document.getElementById('pasteHint');
+  hint.textContent = 'Таблица скопирована!';
+  setTimeout(() => { if (hint.textContent === 'Таблица скопирована!') hint.textContent = ''; }, 2000);
+});
+
+// Download as proper Excel (.xlsx)
+document.getElementById('excelBtn').addEventListener('click', () => {
+  const data = [['Product ID', 'Маркировка'], ...items.map(i => [i.product_id, i.is_marked ? 'Да' : 'Нет'])];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Order Items');
+  const fname = orderNumber ? `${orderNumber}_items.xlsx` : 'order_items.xlsx';
+  XLSX.writeFile(wb, fname);
+});
+</script>
+</body>
+</html>
